@@ -1,0 +1,13 @@
+UPDATE public.recipes SET video_url = 'https://assets.mixkit.co/videos/49231/49231-720.mp4', thumbnail_url = 'https://assets.mixkit.co/videos/49231/49231-thumb-360-0.jpg' WHERE title = 'Smoky Jollof Rice';
+UPDATE public.recipes SET video_url = 'https://assets.mixkit.co/videos/43063/43063-720.mp4', thumbnail_url = 'https://assets.mixkit.co/videos/43063/43063-thumb-360-0.jpg' WHERE title = 'Suya Skewers';
+UPDATE public.recipes SET video_url = 'https://assets.mixkit.co/videos/12171/12171-720.mp4', thumbnail_url = 'https://assets.mixkit.co/videos/12171/12171-thumb-360-0.jpg' WHERE title = 'Pasta Carbonara';
+UPDATE public.recipes SET video_url = 'https://assets.mixkit.co/videos/1666/1666-720.mp4',   thumbnail_url = 'https://assets.mixkit.co/videos/1666/1666-thumb-360-0.jpg'   WHERE title = 'Margherita Pizza';
+UPDATE public.recipes SET video_url = 'https://assets.mixkit.co/videos/43925/43925-720.mp4', thumbnail_url = 'https://assets.mixkit.co/videos/43925/43925-thumb-360-0.jpg' WHERE title = 'Salmon Poke Bowl';
+UPDATE public.recipes SET video_url = 'https://assets.mixkit.co/videos/4830/4830-720.mp4',   thumbnail_url = 'https://assets.mixkit.co/videos/4830/4830-thumb-360-0.jpg'   WHERE title = 'Tonkotsu Ramen';
+UPDATE public.recipes SET video_url = 'https://assets.mixkit.co/videos/47555/47555-720.mp4', thumbnail_url = 'https://assets.mixkit.co/videos/47555/47555-thumb-360-0.jpg' WHERE title = 'Tacos al Pastor';
+UPDATE public.recipes SET video_url = 'https://assets.mixkit.co/videos/40522/40522-720.mp4', thumbnail_url = 'https://assets.mixkit.co/videos/40522/40522-thumb-360-0.jpg' WHERE title = 'Elote';
+UPDATE public.recipes SET video_url = 'https://assets.mixkit.co/videos/4672/4672-720.mp4',   thumbnail_url = 'https://assets.mixkit.co/videos/4672/4672-thumb-360-0.jpg'   WHERE title = 'Butter Chicken';
+UPDATE public.recipes SET video_url = 'https://assets.mixkit.co/videos/26085/26085-720.mp4', thumbnail_url = 'https://assets.mixkit.co/videos/26085/26085-thumb-360-0.jpg' WHERE title = 'Masala Chai';
+UPDATE public.recipes SET video_url = 'https://assets.mixkit.co/videos/42464/42464-720.mp4', thumbnail_url = 'https://assets.mixkit.co/videos/42464/42464-thumb-360-0.jpg' WHERE title = 'Chocolate Lava Cake';
+UPDATE public.recipes SET video_url = 'https://assets.mixkit.co/videos/10422/10422-720.mp4', thumbnail_url = 'https://assets.mixkit.co/videos/10422/10422-thumb-360-0.jpg' WHERE title = 'Banana Bread';
+UPDATE public.recipes SET video_url = 'https://assets.mixkit.co/videos/1669/1669-720.mp4', thumbnail_url = COALESCE(thumbnail_url, 'https://assets.mixkit.co/videos/1669/1669-thumb-360-0.jpg') WHERE video_url IS NULL OR video_url = '';

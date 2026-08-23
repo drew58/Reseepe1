@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Reseepe</string>
+    <string name="title_activity_main">Reseepe</string>
+    <string name="package_name">com.reseepe.app</string>
+    <string name="custom_url_scheme">com.reseepe.app</string>
+</resources>
