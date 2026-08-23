@@ -128,7 +128,7 @@ const Auth = () => {
         )}
 
         {/* Form (shown after type selection or on login) */}
-        {isLogin || accountType !== null && (
+        {(isLogin || accountType !== null) && (
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
             {/* Back button on signup */}
             {!isLogin && accountType && (
