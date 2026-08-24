@@ -130,28 +130,35 @@ const StoriesRow = ({ onStoryCreated }: Props) => {
     <>
       <div className="flex gap-2.5 overflow-x-auto pb-3 scrollbar-hide px-6">
         {/* Your story */}
-        {user && userProfile && (
-          <motion.button
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            onClick={() => setShowCreateSheet(true)}
-            className="flex-shrink-0 flex flex-col items-center gap-2 active:scale-[0.95] transition-transform"
-          >
-            <div className="relative w-16 h-16">
-              <img
-                src={userProfile.avatar_url || "https://via.placeholder.com/64"}
-                alt="Your story"
-                className="w-16 h-16 rounded-full object-cover border-2 border-primary/30"
-              />
-              <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-primary flex items-center justify-center border-2 border-background">
-                <Plus className="w-3.5 h-3.5 text-primary-foreground" />
-              </div>
-            </div>
-            <span className="text-[11px] font-semibold text-foreground text-center w-16 truncate">
-              Your story
-            </span>
-          </motion.button>
-        )}
+        {user && (
+  <motion.button
+    initial={{ opacity: 0, scale: 0.9 }}
+    animate={{ opacity: 1, scale: 1 }}
+    onClick={() => setShowCreateSheet(true)}
+    className="flex-shrink-0 flex flex-col items-center gap-2 active:scale-[0.95] transition-transform"
+  >
+    <div className="relative w-16 h-16">
+      {userProfile?.avatar_url ? (
+        <img
+          src={userProfile.avatar_url}
+          alt="Your story"
+          className="w-16 h-16 rounded-full object-cover border-2 border-primary/30"
+        />
+      ) : (
+        <div className="w-16 h-16 rounded-full border-2 border-primary/30 bg-secondary flex items-center justify-center text-lg font-bold text-muted-foreground">
+          {(userProfile?.display_name || user.email || "?").charAt(0).toUpperCase()}
+        </div>
+      )}
+      <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-primary flex items-center justify-center border-2 border-background">
+        <Plus className="w-3.5 h-3.5 text-primary-foreground" />
+      </div>
+    </div>
+    <span className="text-[11px] font-semibold text-foreground text-center w-16 truncate">
+      Your story
+    </span>
+  </motion.button>
+)}
+
 
         {/* Other stories */}
         {stories.map((story, i) => (
