@@ -1,12 +1,12 @@
-import { Settings, Bookmark, Users, ChevronRight, Loader2, Heart, PlusCircle, Film, BarChart3 } from "lucide-react";
+import {Settings,Bookmark,Users,ChevronRight,Loader2,Heart,BadgeCheck,Film,} from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import food1 from "@/assets/food-1.jpg";
-import VerifiedBadge from "@/components/VerifiedBadge";
 import ProfileCompletionCard from "@/components/ProfileCompletionCard";
-import { isProfileComplete } from "@/lib/profile";
+import { missingFields } from "@/lib/profile";
+import { BadgeCheck } from "lucide-react";
 
 type Recipe = { id: string; title: string; thumbnail_url: string | null };
 
@@ -72,9 +72,8 @@ const ProfilePage = () => {
 
   const displayName = profile?.display_name || user?.user_metadata?.display_name || "User";
   const username = profile?.username || user?.email?.split("@")[0] || "user";
-  const initials = displayName.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase();
-
-  const verified = isProfileComplete(profile, isCreator);
+  const initials = displayName.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase(); 
+  const complete = profile !== null && missingFields(profile, isCreator).length === 0;
   const currentList = tab === "saved" ? savedRecipes : tab === "mine" ? myRecipesList : subscribedRecipes;
 
   const menuItems = [
@@ -105,7 +104,7 @@ const ProfilePage = () => {
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5">
             <h2 className="font-bold text-foreground truncate">{displayName}</h2>
-            {verified && <VerifiedBadge size="sm" />}
+            {complete && <BadgeCheck className="w-4 h-4 text-fresh shrink-0" />}
             {isCreator && <span className="text-[9px] font-bold bg-fresh/15 text-fresh px-1.5 py-0.5 rounded-full">CREATOR</span>}
           </div>
           <p className="text-xs text-muted-foreground truncate">@{username}</p>
@@ -120,29 +119,6 @@ const ProfilePage = () => {
       </div>
 
       <ProfileCompletionCard profile={profile} isCreator={isCreator} />
-
-      {isCreator && (
-        <div className="glass-card p-4 mb-3 border border-fresh/20">
-          <div className="flex items-center gap-2 mb-3">
-            <BarChart3 className="w-4 h-4 text-fresh" />
-            <p className="text-sm font-semibold text-foreground">Creator Studio</p>
-          </div>
-          <div className="flex gap-2">
-            <button
-              onClick={() => navigate("/create")}
-              className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-fresh text-white text-xs font-semibold active:scale-[0.98] transition-transform"
-            >
-              <PlusCircle className="w-4 h-4" /> Upload Recipe
-            </button>
-            <button
-              onClick={() => setTab("mine")}
-              className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-secondary text-foreground text-xs font-semibold active:scale-[0.98] transition-transform"
-            >
-              <Film className="w-4 h-4" /> My Posts
-            </button>
-          </div>
-        </div>
-      )}
 
       <div className="grid grid-cols-3 gap-3 mb-6">
         {[

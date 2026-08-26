@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
-import { Plus } from "lucide-react";
+import { Plus, Play } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { motion } from "framer-motion";
 import StoryViewer from "./StoryViewer";
 import StoryCreateSheet from "./StoryCreateSheet";
+
 
 interface Story {
   id: string;
@@ -15,7 +16,7 @@ interface Story {
   created_at: string;
   expires_at: string;
   creator_name?: string;
-  creator_avatar?: string;
+ creator_avatar?: string | null;
 }
 
 interface Props {
@@ -26,8 +27,7 @@ const StoriesRow = ({ onStoryCreated }: Props) => {
   const { user } = useAuth();
   const [stories, setStories] = useState<Story[]>([]);
   const [userProfile, setUserProfile] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [selectedStory, setSelectedStory] = useState<Story | null>(null);
+ const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [showCreateSheet, setShowCreateSheet] = useState(false);
 
   // Load user profile
@@ -78,10 +78,8 @@ const StoriesRow = ({ onStoryCreated }: Props) => {
 
           setStories(hydrated);
         }
-      } catch (error) {
+           } catch (error) {
         console.error("Failed to load stories:", error);
-      } finally {
-        setLoading(false);
       }
     })();
   }, []);
@@ -167,23 +165,32 @@ const StoriesRow = ({ onStoryCreated }: Props) => {
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: (i + 1) * 0.05 }}
-            onClick={() => setSelectedStory(story)}
+            onClick={() => setSelectedIndex(i)}
             className="flex-shrink-0 flex flex-col items-center gap-2 active:scale-[0.95] transition-transform"
           >
-            <div className="relative">
-              <img
-                src={story.media_url}
-                alt={story.creator_name}
-                className="w-16 h-16 rounded-full object-cover border-2 border-primary/30"
-              />
-              {story.creator_avatar && (
-                <img
-                  src={story.creator_avatar}
-                  alt={story.creator_name}
-                  className="absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full object-cover border-2 border-background"
-                />
-              )}
-            </div>
+            <div className="relative w-16 h-16 rounded-full overflow-hidden border-2 border-primary/30">
+  {story.media_type === "video" ? (
+    <video
+      src={story.media_url}
+      muted
+      playsInline
+      preload="metadata"
+      className="w-full h-full object-cover"
+    />
+  ) : (
+    <img
+      src={story.media_url}
+      alt=""
+      className="w-full h-full object-cover"
+    />
+  )}
+
+  {story.media_type === "video" && (
+    <span className="absolute bottom-1 right-1 w-5 h-5 rounded-full bg-black/50 flex items-center justify-center">
+      <Play className="w-3 h-3 text-white fill-white" />
+    </span>
+  )}
+</div>
             <span className="text-[11px] font-semibold text-foreground text-center w-16 truncate">
               {story.creator_name}
             </span>
@@ -192,11 +199,14 @@ const StoriesRow = ({ onStoryCreated }: Props) => {
       </div>
 
       {/* Story viewer modal */}
-      <StoryViewer
-        story={selectedStory}
-        onClose={() => setSelectedStory(null)}
-        onDelete={handleStoryDelete}
-      />
+     {selectedIndex !== null && (
+  <StoryViewer
+    stories={stories}
+    initialIndex={selectedIndex}
+    onClose={() => setSelectedIndex(null)}
+    onDelete={handleStoryDelete}
+  />
+)}
 
       {/* Story create sheet */}
       <StoryCreateSheet
@@ -205,6 +215,7 @@ const StoriesRow = ({ onStoryCreated }: Props) => {
         onCreated={handleStoryCreated}
       />
     </>
+    
   );
 };
 

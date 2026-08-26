@@ -83,7 +83,12 @@ const EditProfilePage = () => {
       } as any;
       if (newAvatarUrl) updates.avatar_url = newAvatarUrl;
 
-      const { error } = await supabase.from("profiles").update(updates as any).eq("user_id", user.id);
+      const { error } = await supabase
+  .from("profiles")
+  .upsert(
+    { user_id: user.id, ...updates },
+    { onConflict: "user_id" }
+  );
 
       if (error) throw error;
       toast.success("Profile updated!");
