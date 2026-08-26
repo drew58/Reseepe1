@@ -1,6 +1,6 @@
 import { Search, MessageSquare, Heart, Bookmark, Share2, Clock, DollarSign } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import StoriesRow from "@/components/StoriesRow";
 import VerifiedBadge from "@/components/VerifiedBadge";
@@ -20,11 +20,14 @@ type Recipe = {
   cook_time: string | null;
   cost_estimate: string | null;
   like_count: number;
+  save_count: number;
   comment_count: number;
   creator_id: string;
   creator?: { display_name: string | null; username: string | null; avatar_url: string | null };
   verified?: boolean;
 };
+
+const PAGE_SIZE = 20;
 
 const FeedVideo = ({ src, poster, title, onFullscreen }: { src: string; poster?: string; title: string; onFullscreen?: () => void }) => {
   const ref = useRef<HTMLVideoElement>(null);
@@ -87,61 +90,98 @@ const FeedVideo = ({ src, poster, title, onFullscreen }: { src: string; poster?:
 const HomeFeed = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [recipes, setRecipes] = useState<Recipe[]>(() => getFeedCache<Recipe>());
-  const [loading, setLoading] = useState(() => getFeedCache<Recipe>().length === 0);
+  const [recipes, setRecipes] = useState<Recipe[]>(() => getFeedCache<Recipe>("home"));
+  const [loading, setLoading] = useState(() => getFeedCache<Recipe>("home").length === 0);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
   const [likedRecipes, setLikedRecipes] = useState<Set<string>>(new Set());
   const [savedRecipes, setSavedRecipes] = useState<Set<string>>(new Set());
   const [fullscreenVideo, setFullscreenVideo] = useState<string | null>(null);
   const [fullscreenTitle, setFullscreenTitle] = useState("");
   const [commentRecipeId, setCommentRecipeId] = useState<string | null>(null);
   const [firstComment, setFirstComment] = useState<Record<string, any>>({});
+  const loadingMoreRef = useRef(false);
 
-  useEffect(() => {
-    (async () => {
-      const { data } = await supabase
+  const enrichRecipes = useCallback(async (rows: any[]) => {
+    const cIds = Array.from(new Set(rows.map((r) => r.creator_id)));
+    const [{ data: profs }, { data: fcs }] = await Promise.all([
+      supabase
+        .from("profiles")
+        .select("user_id,display_name,username,avatar_url")
+        .in("user_id", cIds.length ? cIds : ["00000000-0000-0000-0000-000000000000"]),
+      supabase.from("featured_creators" as any).select("username,verified"),
+    ]);
+
+    const profMap = new Map((profs || []).map((p: any) => [p.user_id, p]));
+    const fcMap = new Map((fcs as any[] || []).map((f: any) => [f.username, f]));
+    const enriched = rows.map((r) => {
+      const p = profMap.get(r.creator_id);
+      const fc = p?.username ? fcMap.get(p.username) : null;
+      return { ...r, creator: p, verified: !!fc?.verified } as Recipe;
+    });
+
+    if (rows.length) {
+      const { data: comments } = await (supabase as any)
+        .rpc("get_first_comments", { recipe_ids: rows.map((row) => row.id) });
+      const nextFirstComments: Record<string, any> = {};
+      (comments || []).forEach((comment: any) => {
+        nextFirstComments[comment.recipe_id] = {
+          ...comment,
+          user: { display_name: comment.display_name, avatar_url: comment.avatar_url },
+        };
+      });
+      setFirstComment((previous) => ({ ...previous, ...nextFirstComments }));
+    }
+
+    return enriched;
+  }, []);
+
+  const fetchPage = useCallback(async (offset: number) => {
+    const { data, error } = await supabase
         .from("recipes")
         .select("*")
         .eq("post_type", "post")
         .order("created_at", { ascending: false })
-        .limit(20);
+        .range(offset, offset + PAGE_SIZE - 1);
+    if (error) throw error;
+    const rows = (data || []) as any[];
+    return { rows: await enrichRecipes(rows), hasMore: rows.length === PAGE_SIZE };
+  }, [enrichRecipes]);
 
-      const rows = (data || []) as any[];
-      const cIds = Array.from(new Set(rows.map((r) => r.creator_id)));
-
-      const { data: profs } = await supabase
-        .from("profiles")
-        .select("user_id,display_name,username,avatar_url")
-        .in("user_id", cIds.length ? cIds : ["00000000-0000-0000-0000-000000000000"]);
-
-      const { data: fcs } = await supabase.from("featured_creators" as any).select("username,verified");
-
-      const profMap = new Map((profs || []).map((p: any) => [p.user_id, p]));
-      const fcMap = new Map((fcs as any[] || []).map((f: any) => [f.username, f]));
-
-      const enriched = rows.map((r) => {
-        const p = profMap.get(r.creator_id);
-        const fc = p?.username ? fcMap.get(p.username) : null;
-        return { ...r, creator: p, verified: !!fc?.verified };
-      });
-
-      // Load first comment for each recipe
-      for (const recipe of enriched) {
-        const { data: comments } = await supabase
-          .from("comments")
-          .select("*, user:profiles(display_name, avatar_url)")
-          .eq("recipe_id", recipe.id)
-          .order("created_at", { ascending: true })
-          .limit(1);
-        if (comments && comments.length > 0) {
-          setFirstComment((prev) => ({ ...prev, [recipe.id]: comments[0] }));
-        }
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const page = await fetchPage(0);
+        if (cancelled) return;
+        setRecipes(page.rows);
+        setFeedCache("home", page.rows);
+        setHasMore(page.hasMore);
+      } finally {
+        if (!cancelled) setLoading(false);
       }
-
-      setRecipes(enriched);
-      setFeedCache(enriched);
-      setLoading(false);
     })();
-  }, []);
+    return () => { cancelled = true; };
+  }, [fetchPage]);
+
+  const loadMore = async () => {
+    if (loadingMoreRef.current || !hasMore) return;
+    loadingMoreRef.current = true;
+    setLoadingMore(true);
+    try {
+      const page = await fetchPage(recipes.length);
+      setRecipes((previous) => {
+        const existing = new Set(previous.map((recipe) => recipe.id));
+        const next = [...previous, ...page.rows.filter((recipe) => !existing.has(recipe.id))];
+        setFeedCache("home", next);
+        return next;
+      });
+      setHasMore(page.hasMore);
+    } finally {
+      loadingMoreRef.current = false;
+      setLoadingMore(false);
+    }
+  };
 
   useEffect(() => {
     if (!user) return;
@@ -158,30 +198,54 @@ const HomeFeed = () => {
   const toggleLike = async (id: string, isLiked: boolean) => {
     if (!user) return navigate("/auth");
     const next = !isLiked;
-    const newLiked = new Set(likedRecipes);
-    if (next) newLiked.add(id);
-    else newLiked.delete(id);
-    setLikedRecipes(newLiked);
+    setLikedRecipes((previous) => {
+      const updated = new Set(previous);
+      next ? updated.add(id) : updated.delete(id);
+      return updated;
+    });
+    setRecipes((previous) => previous.map((recipe) => recipe.id === id
+      ? { ...recipe, like_count: Math.max(0, recipe.like_count + (next ? 1 : -1)) }
+      : recipe));
 
-    if (next) {
-      await supabase.from("likes").insert({ user_id: user.id, recipe_id: id });
-    } else {
-      await supabase.from("likes").delete().eq("user_id", user.id).eq("recipe_id", id);
+    const { error } = next
+      ? await supabase.from("likes").upsert({ user_id: user.id, recipe_id: id }, { onConflict: "user_id,recipe_id" })
+      : await supabase.from("likes").delete().eq("user_id", user.id).eq("recipe_id", id);
+    if (error) {
+      setLikedRecipes((previous) => {
+        const updated = new Set(previous);
+        next ? updated.delete(id) : updated.add(id);
+        return updated;
+      });
+      setRecipes((previous) => previous.map((recipe) => recipe.id === id
+        ? { ...recipe, like_count: Math.max(0, recipe.like_count + (next ? -1 : 1)) }
+        : recipe));
     }
   };
 
   const toggleSave = async (id: string, isSaved: boolean) => {
     if (!user) return navigate("/auth");
     const next = !isSaved;
-    const newSaved = new Set(savedRecipes);
-    if (next) newSaved.add(id);
-    else newSaved.delete(id);
-    setSavedRecipes(newSaved);
+    setSavedRecipes((previous) => {
+      const updated = new Set(previous);
+      next ? updated.add(id) : updated.delete(id);
+      return updated;
+    });
+    setRecipes((previous) => previous.map((recipe) => recipe.id === id
+      ? { ...recipe, save_count: Math.max(0, recipe.save_count + (next ? 1 : -1)) }
+      : recipe));
 
-    if (next) {
-      await supabase.from("saves").insert({ user_id: user.id, recipe_id: id });
-    } else {
-      await supabase.from("saves").delete().eq("user_id", user.id).eq("recipe_id", id);
+    const { error } = next
+      ? await supabase.from("saves").upsert({ user_id: user.id, recipe_id: id }, { onConflict: "user_id,recipe_id" })
+      : await supabase.from("saves").delete().eq("user_id", user.id).eq("recipe_id", id);
+    if (error) {
+      setSavedRecipes((previous) => {
+        const updated = new Set(previous);
+        next ? updated.delete(id) : updated.add(id);
+        return updated;
+      });
+      setRecipes((previous) => previous.map((recipe) => recipe.id === id
+        ? { ...recipe, save_count: Math.max(0, recipe.save_count + (next ? -1 : 1)) }
+        : recipe));
     }
   };
 
@@ -311,7 +375,7 @@ const HomeFeed = () => {
                   className="flex items-center gap-1"
                 >
                   <Bookmark className={`w-5 h-5 ${savedRecipes.has(r.id) ? "fill-primary text-primary" : "text-foreground"}`} />
-                  <span className="text-xs text-muted-foreground">0</span>
+                  <span className="text-xs text-muted-foreground">{r.save_count}</span>
                 </motion.button>
 
                 <motion.button
@@ -375,6 +439,17 @@ const HomeFeed = () => {
         {!loading && recipes.length === 0 && (
           <div className="text-center py-20">
             <p className="text-muted-foreground text-sm">No recipes yet</p>
+          </div>
+        )}
+        {!loading && hasMore && recipes.length > 0 && (
+          <div className="flex justify-center py-4">
+            <button
+              onClick={loadMore}
+              disabled={loadingMore}
+              className="px-4 py-2 rounded-xl bg-secondary text-xs font-semibold text-foreground disabled:opacity-50"
+            >
+              {loadingMore ? "Loading…" : "Load more"}
+            </button>
           </div>
         )}
       </div>

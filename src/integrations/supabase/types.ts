@@ -271,6 +271,7 @@ export type Database = {
           media_url: string
           media_type: string
           caption: string | null
+          media_path: string | null
           created_at: string
           expires_at: string
         }
@@ -280,6 +281,7 @@ export type Database = {
           media_url: string
           media_type?: string
           caption?: string | null
+          media_path?: string | null
           created_at?: string
           expires_at?: string
         }
@@ -289,6 +291,7 @@ export type Database = {
           media_url?: string
           media_type?: string
           caption?: string | null
+          media_path?: string | null
           created_at?: string
           expires_at?: string
         }

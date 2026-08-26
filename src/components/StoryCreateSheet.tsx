@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Camera, ImagePlus, Loader2, Send, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -21,6 +21,10 @@ const StoryCreateSheet = ({ open, onClose, onCreated }: Props) => {
   const [preview, setPreview] = useState<string | null>(null);
   const [caption, setCaption] = useState("");
   const [uploading, setUploading] = useState(false);
+
+  useEffect(() => () => {
+    if (preview) URL.revokeObjectURL(preview);
+  }, [preview]);
 
   const pick = (selected?: File) => {
     if (!selected) return;
@@ -48,6 +52,7 @@ const StoryCreateSheet = ({ open, onClose, onCreated }: Props) => {
       const { error } = await supabase.from("stories").insert({
         user_id: user.id,
         media_url: data.publicUrl,
+        media_path: path,
         media_type: file.type.startsWith("video/") ? "video" : "image",
         caption: caption.trim() || null,
       });

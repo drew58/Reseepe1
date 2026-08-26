@@ -1,5 +1,5 @@
 import { Upload, Camera, Video, Loader2, X } from "lucide-react";
-import { useState, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
@@ -19,16 +19,22 @@ const CreatePage = () => {
   const [steps, setSteps] = useState("");
   const [mediaFile, setMediaFile] = useState<File | null>(null);
   const [mediaPreview, setMediaPreview] = useState<string | null>(null);
+  const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [postType, setPostType] = useState<"post" | "reel">("post");
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
+  const thumbnailInputRef = useRef<HTMLInputElement>(null);
   const { user, isCreator, rolesLoading } = useAuth();
   const navigate = useNavigate();
 
   const isVideo = mediaFile?.type.startsWith("video/");
+
+  useEffect(() => () => {
+    if (mediaPreview) URL.revokeObjectURL(mediaPreview);
+  }, [mediaPreview]);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -39,6 +45,15 @@ const CreatePage = () => {
     }
     setMediaFile(file);
     setMediaPreview(URL.createObjectURL(file));
+    if (!file.type.startsWith("video/")) setThumbnailFile(null);
+  };
+
+  const handleThumbnailSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) return toast.error("Thumbnail must be an image");
+    if (file.size > 10 * 1024 * 1024) return toast.error("Thumbnail must be under 10MB");
+    setThumbnailFile(file);
   };
 
   const handlePublish = async () => {
@@ -50,17 +65,29 @@ const CreatePage = () => {
       toast.error("Please enter a recipe name");
       return;
     }
+    if (isVideo && !thumbnailFile) {
+      toast.error("Add a thumbnail image for your video");
+      return;
+    }
 
     setIsUploading(true);
     try {
       let mediaUrl = "";
+      let thumbnailUrl: string | null = null;
       if (mediaFile) {
         const ext = mediaFile.name.split(".").pop();
-        const path = `${user.id}/${Date.now()}.${ext}`;
+        const path = `${user.id}/recipes/${Date.now()}-media.${ext}`;
         const { error: uploadError } = await supabase.storage.from("videos").upload(path, mediaFile);
         if (uploadError) throw uploadError;
         const { data: urlData } = supabase.storage.from("videos").getPublicUrl(path);
         mediaUrl = urlData.publicUrl;
+      }
+      if (thumbnailFile) {
+        const ext = thumbnailFile.name.split(".").pop() || "jpg";
+        const path = `${user.id}/recipes/${Date.now()}-thumbnail.${ext}`;
+        const { error: uploadError } = await supabase.storage.from("videos").upload(path, thumbnailFile);
+        if (uploadError) throw uploadError;
+        thumbnailUrl = supabase.storage.from("videos").getPublicUrl(path).data.publicUrl;
       }
 
       const uploadedVideo = !!mediaFile?.type.startsWith("video/");
@@ -74,7 +101,7 @@ const CreatePage = () => {
         creator_id: user.id,
         title: title.trim(),
         video_url: uploadedVideo ? mediaUrl : null,
-        thumbnail_url: !uploadedVideo ? mediaUrl || null : null,
+        thumbnail_url: uploadedVideo ? thumbnailUrl : mediaUrl || null,
         cost_estimate: costEstimate || null,
         cook_time: cookTimeDisplay,
         ingredients: ingredients.split("\n").filter(Boolean),
@@ -121,6 +148,7 @@ const CreatePage = () => {
       <input ref={fileInputRef} type="file" accept="video/*,image/*" className="hidden" onChange={handleFileSelect} />
       <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleFileSelect} />
       <input ref={videoInputRef} type="file" accept="video/*" capture="environment" className="hidden" onChange={handleFileSelect} />
+      <input ref={thumbnailInputRef} type="file" accept="image/*" className="hidden" onChange={handleThumbnailSelect} />
 
       {/* Media preview */}
       {mediaPreview ? (
@@ -166,6 +194,24 @@ const CreatePage = () => {
               Record Video
             </button>
           </div>
+        </div>
+      )}
+
+      {isVideo && (
+        <div className="mb-6 rounded-2xl border border-border bg-card p-4 flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-foreground">Video thumbnail</p>
+            <p className="text-xs text-muted-foreground truncate">
+              {thumbnailFile ? thumbnailFile.name : "Required so your post has a reliable preview."}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => thumbnailInputRef.current?.click()}
+            className="shrink-0 px-3 py-2 rounded-xl bg-secondary text-xs font-semibold text-foreground"
+          >
+            {thumbnailFile ? "Replace" : "Add image"}
+          </button>
         </div>
       )}
 

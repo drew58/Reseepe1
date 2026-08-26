@@ -36,8 +36,8 @@ const ReelsPage = () => {
   const [params] = useSearchParams();
   const startId = params.get("id");
 
-  const [reels, setReels] = useState<Reel[]>(() => getFeedCache<Reel>());
-  const [loading, setLoading] = useState(() => getFeedCache<Reel>().length === 0);
+  const [reels, setReels] = useState<Reel[]>(() => getFeedCache<Reel>("reels"));
+  const [loading, setLoading] = useState(() => getFeedCache<Reel>("reels").length === 0);
   const [done, setDone] = useState(false);
   const [activeIdx, setActiveIdx] = useState(0);
   const [likedSet, setLikedSet] = useState<Set<string>>(new Set());
@@ -49,6 +49,7 @@ const ReelsPage = () => {
 
   const containerRef = useRef<HTMLDivElement>(null);
   const videoRefs = useRef<Map<string, HTMLVideoElement>>(new Map());
+  const loadingMoreRef = useRef(false);
 
   const hydrate = useCallback(async (rows: any[]) => {
     if (rows.length === 0) return [];
@@ -67,37 +68,47 @@ const ReelsPage = () => {
   }, []);
 
   const loadMore = useCallback(async () => {
-    if (loading || done) return;
+    if (loadingMoreRef.current || done) return;
+    loadingMoreRef.current = true;
     setLoading(true);
-    const { data } = await supabase
-      .from("recipes")
-      .select("*")
-      .order("created_at", { ascending: false })
-      .range(reels.length, reels.length + PAGE - 1);
-    const rows = (data || []) as any[];
-    if (rows.length < PAGE) setDone(true);
-    const enriched = await hydrate(rows);
-    setReels((prev) => {
-      const next = [...prev, ...enriched];
-      setFeedCache(next);
-      return next;
-    });
-    setLoading(false);
-  }, [loading, done, reels.length, hydrate]);
+    try {
+      const { data, error } = await supabase
+        .from("recipes")
+        .select("*")
+        .eq("post_type", "reel")
+        .order("created_at", { ascending: false })
+        .range(reels.length, reels.length + PAGE - 1);
+      if (error) throw error;
+      const rows = (data || []) as any[];
+      if (rows.length < PAGE) setDone(true);
+      const enriched = await hydrate(rows);
+      setReels((prev) => {
+        const existing = new Set(prev.map((reel) => reel.id));
+        const next = [...prev, ...enriched.filter((reel) => !existing.has(reel.id))];
+        setFeedCache("reels", next);
+        return next;
+      });
+    } finally {
+      loadingMoreRef.current = false;
+      setLoading(false);
+    }
+  }, [done, reels.length, hydrate]);
 
   // Initial: load and put startId first
   useEffect(() => {
     (async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("recipes")
         .select("*")
+        .eq("post_type", "reel")
         .order("created_at", { ascending: false })
         .limit(PAGE);
+      if (error) throw error;
       let rows = (data || []) as any[];
       if (startId) {
         const idx = rows.findIndex((r) => r.id === startId);
         if (idx === -1) {
-          const { data: extra } = await supabase.from("recipes").select("*").eq("id", startId).maybeSingle();
+          const { data: extra } = await supabase.from("recipes").select("*").eq("id", startId).eq("post_type", "reel").maybeSingle();
           if (extra) rows = [extra, ...rows];
         } else if (idx > 0) {
           rows = [rows[idx], ...rows.slice(0, idx), ...rows.slice(idx + 1)];
@@ -105,7 +116,7 @@ const ReelsPage = () => {
       }
       const enriched = await hydrate(rows);
       setReels(enriched);
-      setFeedCache(enriched);
+      setFeedCache("reels", enriched);
       if (rows.length < PAGE) setDone(true);
       setLoading(false);
     })();
