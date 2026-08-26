@@ -179,21 +179,28 @@ const StoryViewer = ({
           </div>
 
           {current.media_type === "video" ? (
-            <video
-              ref={videoRef}
-              src={current.media_url}
-              autoPlay
-              muted
-              playsInline
-              onTimeUpdate={(event) => {
-                const { currentTime, duration } = event.currentTarget;
-                if (Number.isFinite(duration) && duration > 0) {
-                  setProgress((currentTime / duration) * 100);
-                }
-              }}
-              onEnded={goNext}
-              className="w-full h-full object-contain"
-            />
+           <video
+  key={current.id}
+  ref={videoRef}
+  src={current.media_url}
+  autoPlay
+  muted
+  playsInline
+  preload="auto"
+  onCanPlay={() => {
+    if (!paused) {
+      videoRef.current?.play().catch(() => {});
+    }
+  }}
+  onTimeUpdate={(event) => {
+    const { currentTime, duration } = event.currentTarget;
+    if (Number.isFinite(duration) && duration > 0) {
+      setProgress((currentTime / duration) * 100);
+    }
+  }}
+  onEnded={goNext}
+  className="w-full h-full object-contain"
+/>
           ) : (
             <img
               src={current.media_url}
@@ -204,19 +211,16 @@ const StoryViewer = ({
 
           {/* Tap zones: left = previous, right = next; hold = pause */}
           <button
-            aria-label="Previous story"
-            className="absolute inset-y-0 left-0 z-10 w-1/2"
-            onPointerDown={pauseStory}
-            onPointerUp={resumeStory}
-            onClick={goPrevious}
-          />
-          <button
-            aria-label="Next story"
-            className="absolute inset-y-0 right-0 z-10 w-1/2"
-            onPointerDown={pauseStory}
-            onPointerUp={resumeStory}
-            onClick={goNext}
-          />
+  aria-label="Previous story"
+  className="absolute inset-y-0 left-0 z-10 w-1/2"
+  onClick={goPrevious}
+/>
+
+<button
+  aria-label="Next story"
+  className="absolute inset-y-0 right-0 z-10 w-1/2"
+  onClick={goNext}
+/>
 
           <div className="absolute top-6 left-0 right-0 z-20 p-4 bg-gradient-to-b from-black/50 to-transparent pointer-events-none">
             <div className="flex items-center gap-3">
