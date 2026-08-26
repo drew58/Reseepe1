@@ -104,7 +104,9 @@ const ProfilePage = () => {
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5">
             <h2 className="font-bold text-foreground truncate">{displayName}</h2>
-            {complete && <BadgeCheck className="w-4 h-4 text-fresh shrink-0" />}
+            {isCreator && complete && (
+  <BadgeCheck className="w-4 h-4 text-fresh shrink-0" />
+)}
             {isCreator && <span className="text-[9px] font-bold bg-fresh/15 text-fresh px-1.5 py-0.5 rounded-full">CREATOR</span>}
           </div>
           <p className="text-xs text-muted-foreground truncate">@{username}</p>
