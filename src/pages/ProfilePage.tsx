@@ -6,7 +6,6 @@ import { supabase } from "@/integrations/supabase/client";
 import food1 from "@/assets/food-1.jpg";
 import ProfileCompletionCard from "@/components/ProfileCompletionCard";
 import { missingFields } from "@/lib/profile";
-import { BadgeCheck } from "lucide-react";
 
 type Recipe = { id: string; title: string; thumbnail_url: string | null };
 

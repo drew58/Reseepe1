@@ -44,7 +44,7 @@ const App = () => (
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/profile/edit" element={<EditProfilePage />} />
             <Route path="/settings" element={<SettingsPage />} />
-            <Route path="/creator/:id" element={<CreatorProfile />} />
+            <Route path="/creator/:username" element={<CreatorProfile />} />
             <Route path="/subscriptions" element={<SubscriptionsPage />} />
             <Route path="/create" element={<CreatePage />} />
             <Route path="/saved" element={<SavedRecipesPage />} />

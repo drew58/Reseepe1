@@ -21,9 +21,12 @@ const CreatorProfile = () => {
   const [verified, setVerified] = useState(false);
   const [profileCompletion, setProfileCompletion] = useState(0);
 
-  useEffect(() => {
+    useEffect(() => {
     (async () => {
-      if (!username) return;
+      if (!username) {
+        setLoading(false);
+        return;
+      }
 
       // Fetch creator profile
       const { data: prof } = await supabase
