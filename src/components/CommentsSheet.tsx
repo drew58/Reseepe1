@@ -148,7 +148,7 @@ const CommentsSheet = ({ recipeId, onClose, onCountChange }: Props) => {
         >
           <motion.div
             className="w-full max-w-lg bg-card rounded-t-3xl flex flex-col"
-            style={{ height: "75vh" }}
+            style={{ height: "calc(75vh - 64px)" }}
             initial={{ y: "100%" }}
             animate={{ y: 0 }}
             exit={{ y: "100%" }}
@@ -192,7 +192,7 @@ const CommentsSheet = ({ recipeId, onClose, onCountChange }: Props) => {
               )}
             </div>
 
-            <div className="px-4 py-3 border-t border-border/50 flex items-center gap-2 pb-40">
+            <div className="px-4 py-3 border-t border-border/50 flex items-center gap-2 pb-4">
               <input
                 value={text}
                 onChange={(e) => setText(e.target.value)}
