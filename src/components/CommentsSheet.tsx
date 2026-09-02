@@ -192,7 +192,7 @@ const CommentsSheet = ({ recipeId, onClose, onCountChange }: Props) => {
               )}
             </div>
 
-            <div className="px-4 py-3 border-t border-border/50 flex items-center gap-2 pb-24">
+            <div className="px-4 py-3 border-t border-border/50 flex items-center gap-2 pb-40">
               <input
                 value={text}
                 onChange={(e) => setText(e.target.value)}
