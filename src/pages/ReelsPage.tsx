@@ -354,7 +354,12 @@ const ReelsPage = () => {
         )}
       </div>
 
-      <CommentsSheet recipeId={commentFor} onClose={() => setCommentFor(null)} onCountChange={bumpCommentCount} />
+      <CommentsSheet 
+  recipeId={commentFor} 
+  onClose={() => setCommentFor(null)} 
+  onCountChange={bumpCommentCount}
+  bottomOffset={64}  // 16 = 4rem, nav is 16, so 64px
+/>
       <ShareSheet recipe={shareFor ? { id: shareFor.id, title: shareFor.title } : null} onClose={() => setShareFor(null)} />
     </div>
   );

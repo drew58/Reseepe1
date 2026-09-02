@@ -192,11 +192,12 @@ const CommentsSheet = ({ recipeId, onClose, onCountChange }: Props) => {
               )}
             </div>
 
-            <div className="px-4 py-3 border-t border-border/50 flex items-center gap-2 pb-safe">
+            <div className="px-4 py-3 border-t border-border/50 flex items-center gap-2 pb-24">
               <input
                 value={text}
                 onChange={(e) => setText(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && send()}
+                onFocus={() => setTimeout(() => listRef.current?.scrollTo({ top: 99999, behavior: "smooth" }), 300)}
                 placeholder={user ? "Add a comment..." : "Sign in to comment"}
                 disabled={!user}
                 className="flex-1 bg-secondary rounded-full px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:ring-2 focus:ring-primary"
