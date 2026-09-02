@@ -9,6 +9,8 @@ const tagOptions = ["Cheap", "Fast", "Healthy", "Comfort", "Spicy", "Vegan"];
 const cookTimeNumbers = [5, 10, 15, 20, 30, 45, 60, 90, 120];
 const cookTimeUnits = ["min", "hour", "day"];
 
+const MAX_MEDIA_MB = 30;
+
 const CreatePage = () => {
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [title, setTitle] = useState("");
@@ -21,8 +23,9 @@ const CreatePage = () => {
   const [mediaPreview, setMediaPreview] = useState<string | null>(null);
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadStep, setUploadStep] = useState("");
   const [postType, setPostType] = useState<"post" | "reel">("post");
-  
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
@@ -39,8 +42,8 @@ const CreatePage = () => {
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 100 * 1024 * 1024) {
-      toast.error("File must be under 100MB");
+    if (file.size > MAX_MEDIA_MB * 1024 * 1024) {
+      toast.error(`File must be under ${MAX_MEDIA_MB}MB — trim or compress the clip first`);
       return;
     }
     setMediaFile(file);
@@ -75,21 +78,31 @@ const CreatePage = () => {
       let mediaUrl = "";
       let thumbnailUrl: string | null = null;
       if (mediaFile) {
+        setUploadStep("Uploading media…");
         const ext = mediaFile.name.split(".").pop();
-        const path = `${user.id}/recipes/${Date.now()}-media.${ext}`;
-        const { error: uploadError } = await supabase.storage.from("videos").upload(path, mediaFile);
-        if (uploadError) throw uploadError;
-        const { data: urlData } = supabase.storage.from("videos").getPublicUrl(path);
+        const mediaPath = `${user.id}/recipes/${Date.now()}-media.${ext}`;
+
+        // Upload media and thumbnail in parallel instead of one after another
+        const thumbExt = thumbnailFile?.name.split(".").pop() || "jpg";
+        const thumbPath = `${user.id}/recipes/${Date.now()}-thumbnail.${thumbExt}`;
+        const [mediaResult, thumbResult] = await Promise.all([
+          supabase.storage.from("videos").upload(mediaPath, mediaFile),
+          thumbnailFile
+            ? supabase.storage.from("videos").upload(thumbPath, thumbnailFile)
+            : Promise.resolve({ data: null, error: null }),
+        ]);
+
+        if (mediaResult.error) throw mediaResult.error;
+        const { data: urlData } = supabase.storage.from("videos").getPublicUrl(mediaPath);
         mediaUrl = urlData.publicUrl;
-      }
-      if (thumbnailFile) {
-        const ext = thumbnailFile.name.split(".").pop() || "jpg";
-        const path = `${user.id}/recipes/${Date.now()}-thumbnail.${ext}`;
-        const { error: uploadError } = await supabase.storage.from("videos").upload(path, thumbnailFile);
-        if (uploadError) throw uploadError;
-        thumbnailUrl = supabase.storage.from("videos").getPublicUrl(path).data.publicUrl;
+
+        if (thumbnailFile) {
+          if (thumbResult.error) throw thumbResult.error;
+          thumbnailUrl = supabase.storage.from("videos").getPublicUrl(thumbPath).data.publicUrl;
+        }
       }
 
+      setUploadStep("Saving recipe…");
       const uploadedVideo = !!mediaFile?.type.startsWith("video/");
       const cookTimeDisplay = cookTimeUnit === "hour"
         ? `${cookTimeNum} hour${parseInt(cookTimeNum) > 1 ? "s" : ""}`
@@ -118,6 +131,7 @@ const CreatePage = () => {
       toast.error(err.message || "Failed to publish");
     } finally {
       setIsUploading(false);
+      setUploadStep("");
     }
   };
 
@@ -176,7 +190,7 @@ const CreatePage = () => {
           >
             <Upload className="w-8 h-8 text-primary" />
             <p className="text-sm font-medium text-foreground">Tap to upload</p>
-            <p className="text-xs text-muted-foreground">MP4, MOV, JPG up to 100MB</p>
+            <p className="text-xs text-muted-foreground">MP4, MOV, JPG up to {MAX_MEDIA_MB}MB</p>
           </div>
           <div className="flex gap-3 mt-3">
             <button
@@ -239,7 +253,7 @@ const CreatePage = () => {
                   : "bg-secondary text-foreground border border-border"
               }`}
             >
-            Post (Feed)
+              Post (Feed)
             </button>
             <button
               onClick={() => setPostType("reel")}
@@ -249,7 +263,7 @@ const CreatePage = () => {
                   : "bg-secondary text-foreground border border-border"
               }`}
             >
-            Reel (Shorts)
+              Reel (Shorts)
             </button>
           </div>
         </div>
@@ -344,7 +358,7 @@ const CreatePage = () => {
           className="w-full mt-4 bg-primary text-primary-foreground py-3 rounded-2xl font-semibold text-sm shadow-lg shadow-primary/25 disabled:opacity-60 flex items-center justify-center gap-2"
         >
           {isUploading && <Loader2 className="w-4 h-4 animate-spin" />}
-          {isUploading ? "Publishing..." : "Publish Recipe"}
+          {isUploading ? (uploadStep || "Publishing...") : "Publish Recipe"}
         </button>
       </div>
     </div>
