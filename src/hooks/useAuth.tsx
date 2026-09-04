@@ -12,15 +12,17 @@ export const useAuth = () => {
   const [rolesLoading, setRolesLoading] = useState(true);
 
   useEffect(() => {
+    let sessionLoaded = false;
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
-      setLoading(false);
+      if (sessionLoaded) setLoading(false);
     });
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
+      sessionLoaded = true;
       setLoading(false);
     });
 
@@ -52,22 +54,11 @@ export const useAuth = () => {
           });
           if (metadataError) throw metadataError;
 
-          const { error: profileError } = await supabase.from("profiles").upsert(
-            {
-              user_id: user.id,
-              display_name: user.user_metadata?.full_name ?? user.user_metadata?.name ?? user.email ?? null,
-              username: pendingUsername ?? user.user_metadata?.username ?? null,
-              role: pendingRole,
-            },
-            { onConflict: "user_id" },
-          );
-          if (profileError) throw profileError;
-
-          const { error: roleError } = await supabase.from("user_roles").upsert(
-            { user_id: user.id, role: pendingRole },
-            { onConflict: "user_id,role" },
-          );
-          if (roleError) throw roleError;
+          const { error: syncError } = await supabase.rpc("sync_google_user_state", {
+            requested_role: pendingRole,
+            requested_username: pendingUsername,
+          });
+          if (syncError) throw syncError;
 
           localStorage.removeItem("reseepe_pending_google_role");
           localStorage.removeItem("reseepe_pending_google_username");

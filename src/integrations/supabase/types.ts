@@ -387,6 +387,13 @@ export type Database = {
           verified: boolean
         }[]
       }
+      sync_google_user_state: {
+        Args: {
+          requested_role: string
+          requested_username: string | null
+        }
+        Returns: undefined
+      }
     }
   }
 }

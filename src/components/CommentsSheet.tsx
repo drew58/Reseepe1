@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Send, Loader2, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -137,7 +138,7 @@ const CommentsSheet = ({ recipeId, onClose, onCountChange, bottomOffset = 0 }: P
     }
   };
 
-  return (
+  return createPortal(
     <AnimatePresence>
       {open && (
         <motion.div
@@ -218,7 +219,8 @@ const CommentsSheet = ({ recipeId, onClose, onCountChange, bottomOffset = 0 }: P
           </motion.div>
         </motion.div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body,
   );
 };
 
