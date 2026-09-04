@@ -249,6 +249,36 @@ const HomeFeed = () => {
     }
   };
 
+  useEffect(() => {
+    const channel = supabase
+      .channel("home-count-sync")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "comments" }, (payload) => {
+        const recipeId = (payload.new as any)?.recipe_id;
+        if (!recipeId) return;
+        setRecipes((previous) => previous.map((recipe) => recipe.id === recipeId ? { ...recipe, comment_count: Math.max(0, (recipe.comment_count || 0) + 1) } : recipe));
+      })
+      .on("postgres_changes", { event: "DELETE", schema: "public", table: "comments" }, (payload) => {
+        const recipeId = (payload.old as any)?.recipe_id;
+        if (!recipeId) return;
+        setRecipes((previous) => previous.map((recipe) => recipe.id === recipeId ? { ...recipe, comment_count: Math.max(0, (recipe.comment_count || 0) - 1) } : recipe));
+      })
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "likes" }, (payload) => {
+        const recipeId = (payload.new as any)?.recipe_id;
+        if (!recipeId) return;
+        setRecipes((previous) => previous.map((recipe) => recipe.id === recipeId ? { ...recipe, like_count: Math.max(0, (recipe.like_count || 0) + 1) } : recipe));
+      })
+      .on("postgres_changes", { event: "DELETE", schema: "public", table: "likes" }, (payload) => {
+        const recipeId = (payload.old as any)?.recipe_id;
+        if (!recipeId) return;
+        setRecipes((previous) => previous.map((recipe) => recipe.id === recipeId ? { ...recipe, like_count: Math.max(0, (recipe.like_count || 0) - 1) } : recipe));
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
   return (
     <div className="min-h-screen bg-background pb-20">
       {/* Header */}
@@ -465,6 +495,8 @@ const HomeFeed = () => {
       <CommentsSheet
         recipeId={commentRecipeId}
         onClose={() => setCommentRecipeId(null)}
+        onCountChange={(recipeId, delta) => setRecipes((previous) => previous.map((recipe) => recipe.id === recipeId ? { ...recipe, comment_count: Math.max(0, (recipe.comment_count || 0) + delta) } : recipe))}
+        bottomOffset={64}
       />
 
       {/* Creator button */}

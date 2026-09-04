@@ -25,6 +25,48 @@ const RecipeDetail = () => {
 
   useEffect(() => {
     if (!id) return;
+
+    const channel = supabase
+      .channel(`recipe-detail-${id}`)
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "comments", filter: `recipe_id=eq.${id}` }, (payload) => {
+        const value = (payload.new as any)?.recipe_id;
+        if (!value) return;
+        setRecipe((r: any) => r ? { ...r, comment_count: Math.max(0, (r.comment_count || 0) + 1) } : r);
+      })
+      .on("postgres_changes", { event: "DELETE", schema: "public", table: "comments", filter: `recipe_id=eq.${id}` }, (payload) => {
+        const value = (payload.old as any)?.recipe_id;
+        if (!value) return;
+        setRecipe((r: any) => r ? { ...r, comment_count: Math.max(0, (r.comment_count || 0) - 1) } : r);
+      })
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "likes" }, (payload) => {
+        const recipeId = (payload.new as any)?.recipe_id;
+        if (recipeId !== id) return;
+        setRecipe((r: any) => r ? { ...r, like_count: Math.max(0, (r.like_count || 0) + 1) } : r);
+      })
+      .on("postgres_changes", { event: "DELETE", schema: "public", table: "likes" }, (payload) => {
+        const recipeId = (payload.old as any)?.recipe_id;
+        if (recipeId !== id) return;
+        setRecipe((r: any) => r ? { ...r, like_count: Math.max(0, (r.like_count || 0) - 1) } : r);
+      })
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "saves" }, (payload) => {
+        const recipeId = (payload.new as any)?.recipe_id;
+        if (recipeId !== id) return;
+        setRecipe((r: any) => r ? { ...r, save_count: Math.max(0, (r.save_count || 0) + 1) } : r);
+      })
+      .on("postgres_changes", { event: "DELETE", schema: "public", table: "saves" }, (payload) => {
+        const recipeId = (payload.old as any)?.recipe_id;
+        if (recipeId !== id) return;
+        setRecipe((r: any) => r ? { ...r, save_count: Math.max(0, (r.save_count || 0) - 1) } : r);
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [id]);
+
+  useEffect(() => {
+    if (!id) return;
     (async () => {
       const { data } = await supabase.from("recipes").select("*").eq("id", id).maybeSingle();
       setRecipe(data);
@@ -273,6 +315,7 @@ const RecipeDetail = () => {
             r ? { ...r, comment_count: Math.max(0, (r.comment_count || 0) + delta) } : r
           )
         }
+        bottomOffset={64}
       />
       {!commentsOpen && (
         <ShareSheet

@@ -27,22 +27,74 @@ export const useAuth = () => {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Load roles when user changes
   useEffect(() => {
     if (!user) {
       setRoles([]);
       setRolesLoading(false);
       return;
     }
-    setRolesLoading(true);
-    supabase
+
+    let cancelled = false;
+
+    const loadRoles = async () => {
+      setRolesLoading(true);
+
+      const pendingRole = localStorage.getItem("reseepe_pending_google_role") as AppRole | null;
+      const pendingUsername = localStorage.getItem("reseepe_pending_google_username");
+
+      if (pendingRole) {
+        try {
+          const { error: metadataError } = await supabase.auth.updateUser({
+            data: {
+              role: pendingRole,
+              ...(pendingUsername ? { username: pendingUsername } : {}),
+            },
+          });
+          if (metadataError) throw metadataError;
+
+          const { error: profileError } = await supabase.from("profiles").upsert(
+            {
+              user_id: user.id,
+              display_name: user.user_metadata?.full_name ?? user.user_metadata?.name ?? user.email ?? null,
+              username: pendingUsername ?? user.user_metadata?.username ?? null,
+              role: pendingRole,
+            },
+            { onConflict: "user_id" },
+          );
+          if (profileError) throw profileError;
+
+          const { error: roleError } = await supabase.from("user_roles").upsert(
+            { user_id: user.id, role: pendingRole },
+            { onConflict: "user_id,role" },
+          );
+          if (roleError) throw roleError;
+
+          localStorage.removeItem("reseepe_pending_google_role");
+          localStorage.removeItem("reseepe_pending_google_username");
+        } catch (error) {
+          console.error("Google user sync failed:", error);
+        }
+      }
+
+      const { data, error } = await supabase
       .from("user_roles" as any)
       .select("role")
-      .eq("user_id", user.id)
-      .then(({ data }) => {
-        setRoles(((data as any[]) || []).map((r) => r.role as AppRole));
-        setRolesLoading(false);
-      });
+      .eq("user_id", user.id);
+
+      if (error) {
+        console.error("Role loading failed:", error);
+      } else if (!cancelled) {
+        setRoles(((data as any[]) || []).map((roleRow) => roleRow.role as AppRole));
+      }
+
+      if (!cancelled) setRolesLoading(false);
+    };
+
+    void loadRoles();
+
+    return () => {
+      cancelled = true;
+    };
   }, [user]);
 
   const signUp = async (

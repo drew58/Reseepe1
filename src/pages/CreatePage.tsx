@@ -110,7 +110,7 @@ const CreatePage = () => {
         ? `${cookTimeNum} day${parseInt(cookTimeNum) > 1 ? "s" : ""}`
         : `${cookTimeNum} min`;
 
-      const { error } = await supabase.from("recipes").insert({
+      const { error } = await (supabase as any).from("recipes").insert({
         creator_id: user.id,
         title: title.trim(),
         video_url: uploadedVideo ? mediaUrl : null,

@@ -19,6 +19,7 @@ interface Props {
   recipeId: string | null;
   onClose: () => void;
   onCountChange?: (recipeId: string, delta: number) => void;
+  bottomOffset?: number;
 }
 
 const timeAgo = (iso: string) => {
@@ -29,7 +30,7 @@ const timeAgo = (iso: string) => {
   return `${Math.floor(s / 86400)}d`;
 };
 
-const CommentsSheet = ({ recipeId, onClose, onCountChange }: Props) => {
+const CommentsSheet = ({ recipeId, onClose, onCountChange, bottomOffset = 0 }: Props) => {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [comments, setComments] = useState<CommentRow[]>([]);
@@ -110,7 +111,7 @@ const CommentsSheet = ({ recipeId, onClose, onCountChange }: Props) => {
     const content = text.trim();
     if (!content || !recipeId) return;
     setSending(true);
-    const { data, error } = await supabase.from("comments").insert({ recipe_id: recipeId, user_id: user.id, content }).select("*").single();
+    const { data, error } = await (supabase as any).from("comments").insert({ recipe_id: recipeId, user_id: user.id, content }).select("*").single();
     if (error) toast.error(error.message);
     else {
       const row = data as CommentRow;
@@ -148,7 +149,11 @@ const CommentsSheet = ({ recipeId, onClose, onCountChange }: Props) => {
         >
           <motion.div
             className="w-full max-w-lg bg-card rounded-t-3xl flex flex-col"
-            style={{ height: "calc(75vh - 64px)" }}
+            style={{
+              height: `calc(75vh - ${bottomOffset + 12}px)`,
+              marginBottom: `${bottomOffset + 20}px`,
+              maxHeight: "calc(100vh - 120px)",
+            }}
             initial={{ y: "100%" }}
             animate={{ y: 0 }}
             exit={{ y: "100%" }}
@@ -192,7 +197,7 @@ const CommentsSheet = ({ recipeId, onClose, onCountChange }: Props) => {
               )}
             </div>
 
-            <div className="px-4 py-3 border-t border-border/50 flex items-center gap-2 pb-4">
+            <div className="px-4 py-3 border-t border-border/50 flex items-center gap-2 pb-[max(1rem,env(safe-area-inset-bottom))]">
               <input
                 value={text}
                 onChange={(e) => setText(e.target.value)}

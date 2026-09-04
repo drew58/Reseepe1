@@ -77,19 +77,36 @@ CREATE TRIGGER update_profiles_updated_at BEFORE UPDATE ON public.profiles
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 DECLARE _role public.app_role;
+DECLARE _username text;
 BEGIN
   _role := COALESCE((NEW.raw_user_meta_data->>'role')::public.app_role, 'user');
+  _username := NULLIF(NEW.raw_user_meta_data->>'username', '');
 
-  INSERT INTO public.profiles (user_id, display_name, role, specialty, country, bio)
+  INSERT INTO public.profiles (
+    user_id,
+    display_name,
+    username,
+    role,
+    specialty,
+    country,
+    bio
+  )
   VALUES (
     NEW.id,
     COALESCE(NEW.raw_user_meta_data->>'display_name', NEW.email),
+    _username,
     _role::text,
     NULLIF(NEW.raw_user_meta_data->>'specialty', ''),
     NULLIF(NEW.raw_user_meta_data->>'country', ''),
     NULLIF(NEW.raw_user_meta_data->>'bio', '')
   )
-  ON CONFLICT (user_id) DO UPDATE SET role = EXCLUDED.role;
+  ON CONFLICT (user_id) DO UPDATE SET
+    display_name = COALESCE(EXCLUDED.display_name, public.profiles.display_name),
+    username = COALESCE(EXCLUDED.username, public.profiles.username),
+    role = EXCLUDED.role,
+    specialty = COALESCE(EXCLUDED.specialty, public.profiles.specialty),
+    country = COALESCE(EXCLUDED.country, public.profiles.country),
+    bio = COALESCE(EXCLUDED.bio, public.profiles.bio);
 
   INSERT INTO public.user_roles (user_id, role) VALUES (NEW.id, _role)
   ON CONFLICT (user_id, role) DO NOTHING;

@@ -317,6 +317,45 @@ export type Database = {
           created_at?: string
         }
       }
+      billing_subscriptions: {
+        Row: {
+          id: string
+          user_id: string
+          provider: string
+          provider_customer_id: string | null
+          provider_subscription_id: string | null
+          tier: string
+          status: string
+          current_period_ends_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          provider: string
+          provider_customer_id?: string | null
+          provider_subscription_id?: string | null
+          tier: string
+          status: string
+          current_period_ends_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          provider?: string
+          provider_customer_id?: string | null
+          provider_subscription_id?: string | null
+          tier?: string
+          status?: string
+          current_period_ends_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {}
     Enums: {
@@ -329,6 +368,24 @@ export type Database = {
           _role: string
         }
         Returns: boolean
+      }
+      discover_creators: {
+        Args: {
+          search: string | null
+          limit_count: number
+        }
+        Returns: {
+          user_id: string
+          username: string
+          display_name: string | null
+          avatar_url: string | null
+          bio: string | null
+          follower_count: number
+          recipe_count: number
+          is_trending: boolean
+          is_premium: boolean
+          verified: boolean
+        }[]
       }
     }
   }

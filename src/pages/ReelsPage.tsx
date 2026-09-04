@@ -218,6 +218,36 @@ const ReelsPage = () => {
     setReels((prev) => prev.map((x) => (x.id === recipeId ? { ...x, comment_count: Math.max(0, x.comment_count + delta) } : x)));
   };
 
+  useEffect(() => {
+    const channel = supabase
+      .channel("reels-count-sync")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "comments" }, (payload) => {
+        const recipeId = (payload.new as any)?.recipe_id;
+        if (recipeId) bumpCommentCount(recipeId, 1);
+      })
+      .on("postgres_changes", { event: "DELETE", schema: "public", table: "comments" }, (payload) => {
+        const recipeId = (payload.old as any)?.recipe_id;
+        if (recipeId) bumpCommentCount(recipeId, -1);
+      })
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "likes" }, (payload) => {
+        const recipeId = (payload.new as any)?.recipe_id;
+        if (recipeId) {
+          setReels((prev) => prev.map((x) => (x.id === recipeId ? { ...x, like_count: Math.max(0, x.like_count + 1) } : x)));
+        }
+      })
+      .on("postgres_changes", { event: "DELETE", schema: "public", table: "likes" }, (payload) => {
+        const recipeId = (payload.old as any)?.recipe_id;
+        if (recipeId) {
+          setReels((prev) => prev.map((x) => (x.id === recipeId ? { ...x, like_count: Math.max(0, x.like_count - 1) } : x)));
+        }
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
   return (
     <div className="fixed inset-x-0 top-0 bottom-16 bg-black z-30 max-w-lg mx-auto">
       <button

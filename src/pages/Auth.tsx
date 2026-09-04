@@ -68,13 +68,35 @@ const Auth = () => {
   };
 
   const handleGoogleSignIn = async () => {
+    if (!isLogin) {
+      if (!accountType) {
+        toast.error("Please choose whether you are a food lover or a creator first.");
+        return;
+      }
+
+      if (accountType === "creator" && !username.trim()) {
+        toast.error("Please enter a username before continuing with Google.");
+        return;
+      }
+
+      localStorage.setItem("reseepe_pending_google_role", accountType);
+      if (accountType === "creator") {
+        localStorage.setItem("reseepe_pending_google_username", username.trim().toLowerCase());
+      } else {
+        localStorage.removeItem("reseepe_pending_google_username");
+      }
+    }
+
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
         redirectTo: `${window.location.origin}/home`,
       },
     });
-    if (error) toast.error("Google sign-in failed: " + error.message);
+
+    if (error) {
+      toast.error("Google sign-in failed: " + error.message);
+    }
   };
 
   return (
