@@ -1,4 +1,4 @@
-import { Search, MessageSquare, Heart, Bookmark, Share2, Clock, DollarSign } from "lucide-react";
+import { Search, MessageSquare, Heart, Bookmark, Share2, Clock, DollarSign, Flame } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
@@ -25,6 +25,15 @@ type Recipe = {
   creator_id: string;
   creator?: { display_name: string | null; username: string | null; avatar_url: string | null };
   verified?: boolean;
+};
+
+type CreatorPreview = {
+  user_id: string;
+  username: string;
+  display_name: string | null;
+  avatar_url: string | null;
+  recipe_count: number;
+  is_trending: boolean;
 };
 
 const PAGE_SIZE = 20;
@@ -89,7 +98,7 @@ const FeedVideo = ({ src, poster, title, onFullscreen }: { src: string; poster?:
 
 const HomeFeed = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, getCurrentUser } = useAuth();
   const [recipes, setRecipes] = useState<Recipe[]>(() => getFeedCache<Recipe>("home"));
   const [loading, setLoading] = useState(() => getFeedCache<Recipe>("home").length === 0);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -99,6 +108,7 @@ const HomeFeed = () => {
   const [fullscreenVideo, setFullscreenVideo] = useState<string | null>(null);
   const [fullscreenTitle, setFullscreenTitle] = useState("");
   const [commentRecipeId, setCommentRecipeId] = useState<string | null>(null);
+  const [creators, setCreators] = useState<CreatorPreview[]>([]);
   const [firstComment, setFirstComment] = useState<Record<string, any>>({});
   const loadingMoreRef = useRef(false);
 
@@ -164,6 +174,13 @@ const HomeFeed = () => {
     return () => { cancelled = true; };
   }, [fetchPage]);
 
+  useEffect(() => {
+    supabase.rpc("discover_creators", { search: null, limit_count: 6 }).then(({ data, error }) => {
+      if (error) console.error("Creator discovery failed:", error);
+      else setCreators((data || []) as CreatorPreview[]);
+    });
+  }, []);
+
   const loadMore = async () => {
     if (loadingMoreRef.current || !hasMore) return;
     loadingMoreRef.current = true;
@@ -196,7 +213,8 @@ const HomeFeed = () => {
   }, [user]);
 
   const toggleLike = async (id: string, isLiked: boolean) => {
-    if (!user) return navigate("/auth");
+    const currentUser = user ?? await getCurrentUser();
+    if (!currentUser) return navigate("/auth");
     const next = !isLiked;
     setLikedRecipes((previous) => {
       const updated = new Set(previous);
@@ -208,8 +226,8 @@ const HomeFeed = () => {
       : recipe));
 
     const { error } = next
-      ? await supabase.from("likes").upsert({ user_id: user.id, recipe_id: id }, { onConflict: "user_id,recipe_id" })
-      : await supabase.from("likes").delete().eq("user_id", user.id).eq("recipe_id", id);
+      ? await supabase.from("likes").upsert({ user_id: currentUser.id, recipe_id: id }, { onConflict: "user_id,recipe_id" })
+      : await supabase.from("likes").delete().eq("user_id", currentUser.id).eq("recipe_id", id);
     if (error) {
       setLikedRecipes((previous) => {
         const updated = new Set(previous);
@@ -223,7 +241,8 @@ const HomeFeed = () => {
   };
 
   const toggleSave = async (id: string, isSaved: boolean) => {
-    if (!user) return navigate("/auth");
+    const currentUser = user ?? await getCurrentUser();
+    if (!currentUser) return navigate("/auth");
     const next = !isSaved;
     setSavedRecipes((previous) => {
       const updated = new Set(previous);
@@ -235,8 +254,8 @@ const HomeFeed = () => {
       : recipe));
 
     const { error } = next
-      ? await supabase.from("saves").upsert({ user_id: user.id, recipe_id: id }, { onConflict: "user_id,recipe_id" })
-      : await supabase.from("saves").delete().eq("user_id", user.id).eq("recipe_id", id);
+      ? await supabase.from("saves").upsert({ user_id: currentUser.id, recipe_id: id }, { onConflict: "user_id,recipe_id" })
+      : await supabase.from("saves").delete().eq("user_id", currentUser.id).eq("recipe_id", id);
     if (error) {
       setSavedRecipes((previous) => {
         const updated = new Set(previous);
@@ -304,6 +323,30 @@ const HomeFeed = () => {
       <div className="py-3 border-b border-border/30">
         <StoriesRow />
       </div>
+
+      {creators.length > 0 && (
+        <section className="px-4 pt-4">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="flex items-center gap-1.5 text-sm font-bold text-foreground">
+              <Flame className="w-4 h-4 text-primary" /> For You & Trending
+            </h2>
+            <button onClick={() => navigate("/subscriptions")} className="text-xs text-primary font-semibold">See all</button>
+          </div>
+          <div className="flex gap-3 overflow-x-auto scrollbar-hide pb-1">
+            {creators.map((creator) => (
+              <button key={creator.user_id} onClick={() => navigate(`/creator/${creator.username}`)} className="flex-shrink-0 w-20 text-center">
+                {creator.avatar_url ? (
+                  <img src={creator.avatar_url} alt={creator.display_name || creator.username} className="w-14 h-14 mx-auto rounded-full object-cover border-2 border-primary/30" />
+                ) : (
+                  <div className="w-14 h-14 mx-auto rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold">{(creator.display_name || creator.username)[0]?.toUpperCase()}</div>
+                )}
+                <p className="text-[11px] font-semibold text-foreground truncate mt-1">{creator.display_name || `@${creator.username}`}</p>
+                {creator.is_trending && <p className="text-[9px] text-primary">Trending</p>}
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Feed */}
       <div className="max-w-2xl mx-auto px-4 space-y-8 pt-4">

@@ -32,7 +32,7 @@ const PAGE = 5;
 
 const ReelsPage = () => {
   const navigate = useNavigate();
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, getCurrentUser } = useAuth();
   const [params] = useSearchParams();
   const startId = params.get("id");
 
@@ -170,7 +170,8 @@ const ReelsPage = () => {
 
   const toggleLike = async (r: Reel) => {
     if (authLoading) return;
-    if (!user) return navigate("/auth");
+    const currentUser = user ?? await getCurrentUser();
+    if (!currentUser) return navigate("/auth");
     const liked = likedSet.has(r.id);
     setLikedSet((p) => {
       const n = new Set(p);
@@ -178,7 +179,7 @@ const ReelsPage = () => {
       return n;
     });
     setReels((prev) => prev.map((x) => (x.id === r.id ? { ...x, like_count: x.like_count + (liked ? -1 : 1) } : x)));
-    const { error } = await persistLike(user.id, r.id, !liked);
+    const { error } = await persistLike(currentUser.id, r.id, !liked);
     if (error) {
       setLikedSet((p) => {
         const n = new Set(p);
@@ -192,7 +193,8 @@ const ReelsPage = () => {
 
   const toggleSave = async (r: Reel) => {
     if (authLoading) return;
-    if (!user) return navigate("/auth");
+    const currentUser = user ?? await getCurrentUser();
+    if (!currentUser) return navigate("/auth");
     const saved = savedSet.has(r.id);
     setSavedSet((p) => {
       const n = new Set(p);
@@ -200,7 +202,7 @@ const ReelsPage = () => {
       return n;
     });
     setReels((prev) => prev.map((x) => (x.id === r.id ? { ...x, save_count: x.save_count + (saved ? -1 : 1) } : x)));
-    const { error } = await persistSave(user.id, r.id, !saved);
+    const { error } = await persistSave(currentUser.id, r.id, !saved);
     if (error) {
       setSavedSet((p) => {
         const n = new Set(p);

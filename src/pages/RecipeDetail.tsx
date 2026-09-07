@@ -13,7 +13,7 @@ import ShareSheet from "@/components/ShareSheet";
 const RecipeDetail = () => {
   const navigate = useNavigate();
   const { id } = useParams();
-  const { user } = useAuth();
+  const { user, getCurrentUser } = useAuth();
   const [recipe, setRecipe] = useState<any | null>(null);
   const [loading, setLoading] = useState(!!id);
   const [activeTab, setActiveTab] = useState<"ingredients" | "steps">("ingredients");
@@ -102,13 +102,15 @@ const RecipeDetail = () => {
   }, [user, id]);
 
   const toggleLike = async () => {
-    if (!user || !id) return navigate("/auth");
+    if (!id) return;
+    const currentUser = user ?? await getCurrentUser();
+    if (!currentUser) return navigate("/auth");
     const next = !liked;
     setLiked(next);
     setRecipe((r: any) =>
       r ? { ...r, like_count: Math.max(0, (r.like_count || 0) + (next ? 1 : -1)) } : r
     );
-    const { error } = await persistLike(user.id, id, next);
+    const { error } = await persistLike(currentUser.id, id, next);
     if (error) {
       setLiked(!next);
       setRecipe((r: any) =>
@@ -119,10 +121,12 @@ const RecipeDetail = () => {
   };
 
   const toggleSave = async () => {
-    if (!user || !id) return navigate("/auth");
+    if (!id) return;
+    const currentUser = user ?? await getCurrentUser();
+    if (!currentUser) return navigate("/auth");
     const next = !saved;
     setSaved(next);
-    const { error } = await persistSave(user.id, id, next);
+    const { error } = await persistSave(currentUser.id, id, next);
     if (error) {
       setSaved(!next);
       toast.error(error.message);

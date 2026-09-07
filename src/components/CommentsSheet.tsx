@@ -32,7 +32,7 @@ const timeAgo = (iso: string) => {
 };
 
 const CommentsSheet = ({ recipeId, onClose, onCountChange, bottomOffset = 0 }: Props) => {
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, getCurrentUser } = useAuth();
   const navigate = useNavigate();
   const [comments, setComments] = useState<CommentRow[]>([]);
   const [text, setText] = useState("");
@@ -105,18 +105,19 @@ const CommentsSheet = ({ recipeId, onClose, onCountChange, bottomOffset = 0 }: P
 
   const send = async () => {
     if (authLoading) return;
-    if (!user) {
+    const currentUser = user ?? await getCurrentUser();
+    if (!currentUser) {
       navigate("/auth");
       return;
     }
     const content = text.trim();
     if (!content || !recipeId) return;
     setSending(true);
-    const { data, error } = await (supabase as any).from("comments").insert({ recipe_id: recipeId, user_id: user.id, content }).select("*").single();
+    const { data, error } = await (supabase as any).from("comments").insert({ recipe_id: recipeId, user_id: currentUser.id, content }).select("*").single();
     if (error) toast.error(error.message);
     else {
       const row = data as CommentRow;
-      const { data: prof } = await supabase.from("profiles").select("user_id,display_name,username,avatar_url").eq("user_id", user.id).maybeSingle();
+      const { data: prof } = await supabase.from("profiles").select("user_id,display_name,username,avatar_url").eq("user_id", currentUser.id).maybeSingle();
       row.profile = prof as any;
       setComments((prev) => (prev.find((c) => c.id === row.id) ? prev : [...prev, row]));
       onCountChange?.(recipeId, 1);
@@ -149,11 +150,10 @@ const CommentsSheet = ({ recipeId, onClose, onCountChange, bottomOffset = 0 }: P
           onClick={onClose}
         >
           <motion.div
-            className="w-full max-w-lg bg-card rounded-t-3xl flex flex-col"
+            className="fixed left-0 right-0 bottom-0 mx-auto w-full max-w-lg bg-card rounded-t-3xl flex flex-col overflow-hidden"
             style={{
-              height: `calc(75vh - ${bottomOffset + 12}px)`,
-              marginBottom: `${bottomOffset + 20}px`,
-              maxHeight: "calc(100vh - 120px)",
+              bottom: `${bottomOffset}px`,
+              height: `min(75dvh, calc(100dvh - ${bottomOffset}px))`,
             }}
             initial={{ y: "100%" }}
             animate={{ y: 0 }}

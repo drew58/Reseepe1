@@ -24,6 +24,10 @@ export const useAuth = () => {
       setUser(session?.user ?? null);
       sessionLoaded = true;
       setLoading(false);
+    }).catch((error) => {
+      console.error("Session loading failed:", error);
+      sessionLoaded = true;
+      setLoading(false);
     });
 
     return () => subscription.unsubscribe();
@@ -67,15 +71,22 @@ export const useAuth = () => {
         }
       }
 
-      const { data, error } = await supabase
-      .from("user_roles" as any)
-      .select("role")
-      .eq("user_id", user.id);
+      const [{ data, error }, { data: profile }] = await Promise.all([
+        supabase.from("user_roles" as any).select("role")
+          .eq("user_id", user.id),
+        supabase.from("profiles").select("role").eq("user_id", user.id).maybeSingle(),
+      ]);
 
       if (error) {
         console.error("Role loading failed:", error);
       } else if (!cancelled) {
-        setRoles(((data as any[]) || []).map((roleRow) => roleRow.role as AppRole));
+        const loadedRoles = ((data as any[]) || []).map((roleRow) => roleRow.role as AppRole);
+        const profileRole = (profile as { role?: string | null } | null)?.role;
+        if (profileRole === "creator" || profileRole === "admin") loadedRoles.push(profileRole);
+        if (loadedRoles.length === 0 && (user.user_metadata?.role === "creator" || user.user_metadata?.role === "admin")) {
+          loadedRoles.push(user.user_metadata.role as AppRole);
+        }
+        setRoles(Array.from(new Set(loadedRoles)));
       }
 
       if (!cancelled) setRolesLoading(false);
@@ -115,7 +126,17 @@ export const useAuth = () => {
     return supabase.auth.signOut();
   };
 
+  const getCurrentUser = async () => {
+    const { data, error } = await supabase.auth.getUser();
+    if (error) return null;
+    if (data.user) {
+      setUser(data.user);
+      return data.user;
+    }
+    return null;
+  };
+
   const isCreator = roles.includes("creator") || roles.includes("admin");
 
-  return { user, session, loading, roles, rolesLoading, isCreator, signUp, signIn, signOut };
+  return { user, session, loading, roles, rolesLoading, isCreator, signUp, signIn, signOut, getCurrentUser };
 };

@@ -50,29 +50,9 @@ const SubscriptionsPage = () => {
   // Every signed-up creator is discoverable, no seed table required.
   useEffect(() => {
     (async () => {
-      const [{ data: featured }, { data: profiles }] = await Promise.all([
-        (supabase as any).from("featured_creators").select("*") ,
-        (supabase as any).from("profiles").select("user_id, username, display_name, avatar_url, bio"),
-      ]);
-
-      const profileMap = new Map(((profiles as any[]) || []).map((profile) => [profile.username, profile]));
-      const rows = (((featured as any[]) || []) as any[]).map((creator) => {
-        const profile = profileMap.get(creator.username);
-        return {
-          user_id: profile?.user_id ?? creator.id,
-          username: creator.username,
-          display_name: profile?.display_name ?? creator.display_name ?? creator.username,
-          avatar_url: profile?.avatar_url ?? creator.avatar_url,
-          bio: profile?.bio ?? creator.bio ?? null,
-          follower_count: creator.followers_seed ?? 0,
-          recipe_count: 0,
-          is_trending: false,
-          is_premium: Boolean(creator.is_premium),
-          verified: Boolean(creator.verified),
-        } satisfies Creator;
-      });
-
-      setCreators(rows);
+      const { data, error } = await (supabase as any).rpc("discover_creators", { search: null, limit_count: 100 });
+      if (error) throw error;
+      setCreators((data || []) as Creator[]);
       setLoading(false);
     })();
   }, []);
