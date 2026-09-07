@@ -1,4 +1,4 @@
-import { Search, MessageSquare, Heart, Bookmark, Share2, Clock, DollarSign, Flame } from "lucide-react";
+import { Search, MessageSquare, Heart, Bookmark, Share2, Clock, DollarSign } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
@@ -109,6 +109,7 @@ const HomeFeed = () => {
   const [fullscreenTitle, setFullscreenTitle] = useState("");
   const [commentRecipeId, setCommentRecipeId] = useState<string | null>(null);
   const [creators, setCreators] = useState<CreatorPreview[]>([]);
+  const [creatorTab, setCreatorTab] = useState<"for-you" | "trending">("for-you");
   const [firstComment, setFirstComment] = useState<Record<string, any>>({});
   const loadingMoreRef = useRef(false);
 
@@ -180,6 +181,10 @@ const HomeFeed = () => {
       else setCreators((data || []) as CreatorPreview[]);
     });
   }, []);
+
+  const visibleCreators = creatorTab === "trending"
+    ? creators.filter((creator) => creator.is_trending)
+    : creators.filter((creator) => !creator.is_trending);
 
   const loadMore = async () => {
     if (loadingMoreRef.current || !hasMore) return;
@@ -327,13 +332,24 @@ const HomeFeed = () => {
       {creators.length > 0 && (
         <section className="px-4 pt-4">
           <div className="flex items-center justify-between mb-3">
-            <h2 className="flex items-center gap-1.5 text-sm font-bold text-foreground">
-              <Flame className="w-4 h-4 text-primary" /> For You & Trending
-            </h2>
             <button onClick={() => navigate("/subscriptions")} className="text-xs text-primary font-semibold">See all</button>
           </div>
+          <div className="flex gap-1 p-1 mb-3 rounded-xl bg-secondary">
+            <button
+              onClick={() => setCreatorTab("for-you")}
+              className={`flex-1 rounded-lg py-2 text-xs font-semibold transition-colors ${creatorTab === "for-you" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"}`}
+            >
+              For You
+            </button>
+            <button
+              onClick={() => setCreatorTab("trending")}
+              className={`flex-1 rounded-lg py-2 text-xs font-semibold transition-colors ${creatorTab === "trending" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"}`}
+            >
+              Trending
+            </button>
+          </div>
           <div className="flex gap-3 overflow-x-auto scrollbar-hide pb-1">
-            {creators.map((creator) => (
+            {visibleCreators.map((creator) => (
               <button key={creator.user_id} onClick={() => navigate(`/creator/${creator.username}`)} className="flex-shrink-0 w-20 text-center">
                 {creator.avatar_url ? (
                   <img src={creator.avatar_url} alt={creator.display_name || creator.username} className="w-14 h-14 mx-auto rounded-full object-cover border-2 border-primary/30" />
@@ -344,6 +360,9 @@ const HomeFeed = () => {
                 {creator.is_trending && <p className="text-[9px] text-primary">Trending</p>}
               </button>
             ))}
+            {visibleCreators.length === 0 && (
+              <p className="text-xs text-muted-foreground py-4">No trending creators yet.</p>
+            )}
           </div>
         </section>
       )}
