@@ -98,7 +98,7 @@ const FeedVideo = ({ src, poster, title, onFullscreen }: { src: string; poster?:
 
 const HomeFeed = () => {
   const navigate = useNavigate();
-  const { user, getCurrentUser } = useAuth();
+  const { user, loading: authLoading, getCurrentUser } = useAuth();
   const [recipes, setRecipes] = useState<Recipe[]>(() => getFeedCache<Recipe>("home"));
   const [loading, setLoading] = useState(() => getFeedCache<Recipe>("home").length === 0);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -218,7 +218,8 @@ const HomeFeed = () => {
   }, [user]);
 
   const toggleLike = async (id: string, isLiked: boolean) => {
-    const currentUser = user ?? await getCurrentUser();
+    if (authLoading) return;
+    const currentUser = await getCurrentUser();
     if (!currentUser) return navigate("/auth");
     const next = !isLiked;
     setLikedRecipes((previous) => {
@@ -246,7 +247,8 @@ const HomeFeed = () => {
   };
 
   const toggleSave = async (id: string, isSaved: boolean) => {
-    const currentUser = user ?? await getCurrentUser();
+    if (authLoading) return;
+    const currentUser = await getCurrentUser();
     if (!currentUser) return navigate("/auth");
     const next = !isSaved;
     setSavedRecipes((previous) => {

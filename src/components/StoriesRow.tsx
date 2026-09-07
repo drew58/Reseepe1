@@ -24,11 +24,16 @@ interface Props {
 }
 
 const StoriesRow = ({ onStoryCreated }: Props) => {
-  const { user } = useAuth();
+  const { user, loading: authLoading, getCurrentUser } = useAuth();
   const [stories, setStories] = useState<Story[]>([]);
   const [userProfile, setUserProfile] = useState<any>(null);
  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [showCreateSheet, setShowCreateSheet] = useState(false);
+
+  useEffect(() => {
+    if (authLoading || user) return;
+    void getCurrentUser();
+  }, [authLoading, user, getCurrentUser]);
 
   // Load user profile
   useEffect(() => {
@@ -59,8 +64,9 @@ const StoriesRow = ({ onStoryCreated }: Props) => {
 
         if (error) throw error;
 
-        if (data && data.length > 0) {
-          const userIds = [...new Set(data.map((s) => s.user_id))];
+        const storyRows = (data || []) as Story[];
+        if (storyRows.length > 0) {
+          const userIds = [...new Set(storyRows.map((s) => s.user_id))];
           const { data: profiles } = await supabase
             .from("profiles")
             .select("user_id, display_name, avatar_url")
@@ -70,7 +76,7 @@ const StoriesRow = ({ onStoryCreated }: Props) => {
             (profiles || []).map((p) => [p.user_id, p])
           );
 
-          const hydrated = data.map((s) => ({
+          const hydrated = storyRows.map((s) => ({
             ...s,
             creator_name: profileMap.get(s.user_id)?.display_name || "Chef",
             creator_avatar: profileMap.get(s.user_id)?.avatar_url || null,
@@ -97,8 +103,9 @@ const StoriesRow = ({ onStoryCreated }: Props) => {
         .order("created_at", { ascending: false })
         .limit(10);
 
-      if (data && data.length > 0) {
-        const userIds = [...new Set(data.map((s) => s.user_id))];
+      const storyRows = (data || []) as Story[];
+      if (storyRows.length > 0) {
+        const userIds = [...new Set(storyRows.map((s) => s.user_id))];
         const { data: profiles } = await supabase
           .from("profiles")
           .select("user_id, display_name, avatar_url")
@@ -108,7 +115,7 @@ const StoriesRow = ({ onStoryCreated }: Props) => {
           (profiles || []).map((p) => [p.user_id, p])
         );
 
-        const hydrated = data.map((s) => ({
+        const hydrated = storyRows.map((s) => ({
           ...s,
           creator_name: profileMap.get(s.user_id)?.display_name || "Chef",
           creator_avatar: profileMap.get(s.user_id)?.avatar_url || null,

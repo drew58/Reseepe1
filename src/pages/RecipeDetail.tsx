@@ -103,7 +103,7 @@ const RecipeDetail = () => {
 
   const toggleLike = async () => {
     if (!id) return;
-    const currentUser = user ?? await getCurrentUser();
+    const currentUser = await getCurrentUser();
     if (!currentUser) return navigate("/auth");
     const next = !liked;
     setLiked(next);
@@ -122,7 +122,7 @@ const RecipeDetail = () => {
 
   const toggleSave = async () => {
     if (!id) return;
-    const currentUser = user ?? await getCurrentUser();
+    const currentUser = await getCurrentUser();
     if (!currentUser) return navigate("/auth");
     const next = !saved;
     setSaved(next);

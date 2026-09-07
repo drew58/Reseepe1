@@ -170,7 +170,7 @@ const ReelsPage = () => {
 
   const toggleLike = async (r: Reel) => {
     if (authLoading) return;
-    const currentUser = user ?? await getCurrentUser();
+    const currentUser = await getCurrentUser();
     if (!currentUser) return navigate("/auth");
     const liked = likedSet.has(r.id);
     setLikedSet((p) => {
@@ -193,7 +193,7 @@ const ReelsPage = () => {
 
   const toggleSave = async (r: Reel) => {
     if (authLoading) return;
-    const currentUser = user ?? await getCurrentUser();
+    const currentUser = await getCurrentUser();
     if (!currentUser) return navigate("/auth");
     const saved = savedSet.has(r.id);
     setSavedSet((p) => {
