@@ -1,14 +1,5 @@
 import { motion } from "framer-motion";
-
-const letters = [
-  { char: "R", color: "text-primary" },
-  { char: "E", color: "text-primary" },
-  { char: "S", color: "text-[hsl(142,50%,45%)]" },
-  { char: "E", color: "text-[hsl(142,50%,45%)]" },
-  { char: "E", color: "text-[hsl(142,50%,45%)]" },
-  { char: "P", color: "text-primary" },
-  { char: "E", color: "text-primary" },
-];
+import BrandLogo from "@/components/BrandLogo";
 
 const SplashScreen = ({ onComplete }: { onComplete: () => void }) => {
   return (
@@ -19,46 +10,15 @@ const SplashScreen = ({ onComplete }: { onComplete: () => void }) => {
       transition={{ duration: 0.5 }}
       onAnimationComplete={() => {}}
     >
-      <div className="flex items-center">
-        {letters.map((l, i) => (
-          <motion.span
-            key={i}
-            className={`text-5xl font-bold font-display ${l.color}`}
-            initial={{ opacity: 0, y: 30, scale: 0.5 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            transition={{
-              delay: 0.3 + i * 0.12,
-              duration: 0.4,
-              type: "spring",
-              stiffness: 200,
-              damping: 15,
-            }}
-          />
-        ))}
-        {/* Render letters with a second pass to add the char */}
-      </div>
-
-      {/* Re-render properly */}
-      <div className="absolute flex items-center">
-        {letters.map((l, i) => (
-          <motion.span
-            key={i}
-            className={`text-5xl font-bold font-display ${l.color}`}
-            initial={{ opacity: 0, y: 30, scale: 0.5 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            transition={{
-              delay: 0.3 + i * 0.12,
-              duration: 0.4,
-              type: "spring",
-              stiffness: 200,
-              damping: 15,
-            }}
-            onAnimationComplete={i === letters.length - 1 ? () => setTimeout(onComplete, 800) : undefined}
-          >
-            {l.char}
-          </motion.span>
-        ))}
-      </div>
+      <motion.div
+        className="absolute text-5xl font-bold font-display"
+        initial={{ opacity: 0, y: 30, scale: 0.5 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ delay: 0.3, duration: 0.6, type: "spring", stiffness: 200, damping: 15 }}
+        onAnimationComplete={() => setTimeout(onComplete, 800)}
+      >
+        <BrandLogo />
+      </motion.div>
 
       {/* Subtle tagline */}
       <motion.p

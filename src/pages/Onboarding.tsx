@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import BrandLogo from "@/components/BrandLogo";
 import { motion } from "framer-motion";
 import { ChevronRight } from "lucide-react";
 import { toast } from "sonner";
@@ -203,14 +204,7 @@ const Onboarding = () => {
             >
               <div className="text-center">
                 <h1 className="text-3xl font-bold font-display text-foreground mb-2">
-                  Welcome to{" "}
-                  <span className="text-primary">R</span>
-                  <span className="text-primary">E</span>
-                  <span className="text-green-500">S</span>
-                  <span className="text-green-500">E</span>
-                  <span className="text-green-500">E</span>
-                  <span className="text-primary">P</span>
-                  <span className="text-primary">E</span>
+                  Welcome to <BrandLogo />
                 </h1>
                 <p className="text-sm text-muted-foreground">
                   Help us personalize your feed

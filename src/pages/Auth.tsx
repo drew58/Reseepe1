@@ -5,6 +5,7 @@ import { ChefHat, User, Eye, EyeOff, Loader2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import BrandLogo from "@/components/BrandLogo";
 
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(false);
@@ -104,15 +105,7 @@ const Auth = () => {
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="flex-1 max-w-md mx-auto w-full">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold font-display">
-            <span className="text-primary">R</span>
-            <span className="text-primary">E</span>
-            <span className="text-green-500">S</span>
-            <span className="text-green-500">E</span>
-            <span className="text-green-500">E</span>
-            <span className="text-primary">P</span>
-            <span className="text-primary">E</span>
-          </h1>
+          <h1 className="text-3xl font-bold font-display"><BrandLogo /></h1>
           <p className="text-foreground mt-1 text-sm">
             {isLogin ? "Welcome back! Sign in to continue" : "Create your account to get started"}
           </p>

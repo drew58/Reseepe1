@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import StoriesRow from "@/components/StoriesRow";
+import BrandLogo from "@/components/BrandLogo";
 import VerifiedBadge from "@/components/VerifiedBadge";
 import VideoFullScreenModal from "@/components/VideoFullScreenModal";
 import CommentsSheet from "@/components/CommentsSheet";
@@ -310,11 +311,7 @@ const HomeFeed = () => {
       {/* Header */}
       <div className="sticky top-0 z-40 bg-background/95 backdrop-blur-lg px-4 py-4">
         <div className="flex items-center justify-between max-w-2xl mx-auto">
-          <h1 className="text-2xl font-bold font-display">
-            <span className="text-primary">RE</span>
-            <span className="text-fresh">SEE</span>
-            <span className="text-primary">PE</span>
-          </h1>
+          <h1 className="text-2xl font-bold font-display"><BrandLogo /></h1>
           <div className="flex gap-2">
             <button className="w-10 h-10 rounded-full bg-secondary hover:bg-secondary/80 flex items-center justify-center transition-colors" onClick={() => navigate("/messages")}>
               <MessageSquare className="w-5 h-5 text-foreground" />

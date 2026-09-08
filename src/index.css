@@ -43,6 +43,8 @@
     --light-orange: 28 100% 95%;
     --fresh: 142 50% 40%;
     --fresh-foreground: 0 0% 100%;
+    --brand-green: 157 100% 18%;
+    --brand-orange: 24 100% 50%;
 
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 240 5.3% 26.1%;
@@ -76,6 +78,18 @@
     --ring: 24 85% 55%;
     --fresh: 142 50% 48%;
     --fresh-foreground: 0 0% 100%;
+    --brand-green: 157 75% 32%;
+    --brand-orange: 24 100% 58%;
+  }
+}
+
+@layer utilities {
+  .text-brand-green {
+    color: hsl(var(--brand-green));
+  }
+
+  .text-brand-orange {
+    color: hsl(var(--brand-orange));
   }
 }
 

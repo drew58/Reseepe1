@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useTheme } from "@/hooks/useTheme";
+import BrandLogo from "@/components/BrandLogo";
 import { supabase } from "@/integrations/supabase/client";
 import { SUPPORTED_CURRENCIES, getCurrencySymbol } from "@/lib/currency";
 import { motion, AnimatePresence } from "framer-motion";
@@ -152,7 +153,7 @@ const SettingsPage = () => {
         <span className="text-sm font-semibold">Sign Out</span>
       </button>
 
-      <p className="text-center text-[10px] text-muted-foreground mt-6">RESEEPE v1.0.0</p>
+      <p className="text-center text-[10px] text-muted-foreground mt-6"><BrandLogo /> v1.0.0</p>
 
       {/* Currency picker modal */}
       <AnimatePresence>

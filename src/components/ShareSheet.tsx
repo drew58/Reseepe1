@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Copy, Loader2, Send, Share2, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import BrandLogo from "@/components/BrandLogo";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { shareRecipe } from "@/lib/recipeActions";
@@ -64,7 +65,7 @@ const ShareSheet = ({ recipe, onClose }: Props) => {
             <div className="p-4 space-y-3 pb-safe">
               <button onClick={() => shareRecipe(recipe.id, recipe.title)} className="w-full flex items-center gap-3 p-3 rounded-2xl bg-secondary text-left">
                 <Share2 className="w-5 h-5 text-primary" />
-                <span className="text-sm font-semibold text-foreground">Share outside RESEEPE</span>
+                <span className="text-sm font-semibold text-foreground">Share outside <BrandLogo /></span>
               </button>
               <button onClick={async () => { await navigator.clipboard.writeText(`${window.location.origin}/recipe/${recipe.id}`); toast.success("Link copied"); }} className="w-full flex items-center gap-3 p-3 rounded-2xl bg-secondary text-left">
                 <Copy className="w-5 h-5 text-primary" />
