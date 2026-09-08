@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Heart, Bookmark, Share2, Clock, DollarSign, ChefHat, MessageCircle, Loader2, ImageOff } from "lucide-react";
+import { ArrowLeft, Heart, Bookmark, Share2, Clock, DollarSign, ChefHat, MessageCircle, Loader2, ImageOff, Trash2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -21,6 +21,7 @@ const RecipeDetail = () => {
   const [saved, setSaved] = useState(false);
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [userCurrency, setUserCurrency] = useState("USD");
 
   useEffect(() => {
@@ -133,6 +134,27 @@ const RecipeDetail = () => {
     } else if (next) toast.success("Saved");
   };
 
+  const deleteRecipe = async () => {
+    if (!id || !user || recipe?.creator_id !== user.id || isDeleting) return;
+    if (!window.confirm("Delete this recipe? This cannot be undone.")) return;
+
+    setIsDeleting(true);
+    const { error } = await supabase
+      .from("recipes")
+      .delete()
+      .eq("id", id)
+      .eq("creator_id", user.id);
+
+    if (error) {
+      toast.error(error.message);
+      setIsDeleting(false);
+      return;
+    }
+
+    toast.success("Recipe deleted");
+    navigate("/home", { replace: true });
+  };
+
   // Convert cost to viewer's currency (assuming all costs are originally in USD)
   const getConvertedCost = () => {
     if (!recipe?.cost_estimate) return "";
@@ -216,6 +238,17 @@ const RecipeDetail = () => {
           >
             <Share2 className="w-5 h-5 text-foreground" />
           </button>
+          {recipe.creator_id === user?.id && (
+            <button
+              onClick={deleteRecipe}
+              disabled={isDeleting}
+              aria-label="Delete recipe"
+              title="Delete recipe"
+              className="w-10 h-10 rounded-full bg-card/80 backdrop-blur-md flex items-center justify-center disabled:opacity-50"
+            >
+              {isDeleting ? <Loader2 className="w-5 h-5 animate-spin text-destructive" /> : <Trash2 className="w-5 h-5 text-destructive" />}
+            </button>
+          )}
         </div>
       </div>
 
