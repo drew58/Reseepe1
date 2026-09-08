@@ -23,6 +23,7 @@ const CreatePage = () => {
   const [mediaPreview, setMediaPreview] = useState<string | null>(null);
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadStep, setUploadStep] = useState("");
   const [postType, setPostType] = useState<"post" | "reel">("post");
 
@@ -34,6 +35,26 @@ const CreatePage = () => {
   const navigate = useNavigate();
 
   const isVideo = mediaFile?.type.startsWith("video/");
+
+  const uploadWithProgress = (path: string, file: File, accessToken: string, onProgress: (progress: number) => void) =>
+    new Promise<void>((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      const apiKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || import.meta.env.VITE_SUPABASE_ANON_KEY;
+      xhr.open("POST", `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/videos/${path}`);
+      xhr.setRequestHeader("Authorization", `Bearer ${accessToken}`);
+      xhr.setRequestHeader("apikey", apiKey);
+      xhr.setRequestHeader("Content-Type", file.type || "application/octet-stream");
+      xhr.setRequestHeader("x-upsert", "false");
+      xhr.upload.onprogress = (event) => {
+        if (event.lengthComputable) onProgress(Math.round((event.loaded / event.total) * 100));
+      };
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) resolve();
+        else reject(new Error(xhr.responseText || "Media upload failed"));
+      };
+      xhr.onerror = () => reject(new Error("Media upload failed"));
+      xhr.send(file);
+    });
 
   useEffect(() => () => {
     if (mediaPreview) URL.revokeObjectURL(mediaPreview);
@@ -74,7 +95,10 @@ const CreatePage = () => {
     }
 
     setIsUploading(true);
+    setUploadProgress(0);
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) throw new Error("Your session has expired. Please sign in again.");
       let mediaUrl = "";
       let thumbnailUrl: string | null = null;
       if (mediaFile) {
@@ -82,26 +106,19 @@ const CreatePage = () => {
         const ext = mediaFile.name.split(".").pop();
         const mediaPath = `${user.id}/recipes/${Date.now()}-media.${ext}`;
 
-        // Upload media and thumbnail in parallel instead of one after another
         const thumbExt = thumbnailFile?.name.split(".").pop() || "jpg";
         const thumbPath = `${user.id}/recipes/${Date.now()}-thumbnail.${thumbExt}`;
-        const [mediaResult, thumbResult] = await Promise.all([
-          supabase.storage.from("videos").upload(mediaPath, mediaFile),
-          thumbnailFile
-            ? supabase.storage.from("videos").upload(thumbPath, thumbnailFile)
-            : Promise.resolve({ data: null, error: null }),
-        ]);
-
-        if (mediaResult.error) throw mediaResult.error;
+        await uploadWithProgress(mediaPath, mediaFile, session.access_token, (progress) => setUploadProgress(progress));
         const { data: urlData } = supabase.storage.from("videos").getPublicUrl(mediaPath);
         mediaUrl = urlData.publicUrl;
 
         if (thumbnailFile) {
-          if (thumbResult.error) throw thumbResult.error;
+          await uploadWithProgress(thumbPath, thumbnailFile, session.access_token, (progress) => setUploadProgress(50 + Math.round(progress / 2)));
           thumbnailUrl = supabase.storage.from("videos").getPublicUrl(thumbPath).data.publicUrl;
         }
       }
 
+      setUploadProgress(100);
       setUploadStep("Saving recipe…");
       const uploadedVideo = !!mediaFile?.type.startsWith("video/");
       const cookTimeDisplay = cookTimeUnit === "hour"
@@ -131,6 +148,7 @@ const CreatePage = () => {
       toast.error(err.message || "Failed to publish");
     } finally {
       setIsUploading(false);
+      setUploadProgress(0);
       setUploadStep("");
     }
   };
@@ -145,6 +163,18 @@ const CreatePage = () => {
         <p className="text-sm text-muted-foreground max-w-xs mb-6">
           Posting recipes is reserved for verified Food Creators.
         </p>
+        {isUploading && (
+          <div className="rounded-xl border border-primary/20 bg-primary/5 p-3 space-y-2">
+            <div className="flex items-center justify-between text-xs font-semibold text-foreground">
+              <span>{uploadStep || "Uploading media…"}</span>
+              <span>{uploadProgress}%</span>
+            </div>
+            <div className="h-2 w-full overflow-hidden rounded-full bg-secondary">
+              <div className="h-full rounded-full bg-primary transition-[width] duration-200" style={{ width: `${uploadProgress}%` }} />
+            </div>
+          </div>
+        )}
+
         <button
           onClick={() => navigate("/profile")}
           className="px-5 py-3 rounded-2xl bg-primary text-primary-foreground font-semibold text-sm"

@@ -28,14 +28,13 @@ const BottomNav = () => {
             <button
               key={tab.label}
               onClick={() => navigate(tab.path)}
+              aria-label={tab.label}
+              title={tab.label}
               className={`flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-xl transition-all duration-200 ${
                 isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"
               }`}
             >
               <tab.icon className={`w-5 h-5 ${isActive ? "stroke-[2.5]" : ""}`} />
-              <span className={`text-[10px] ${isActive ? "font-semibold" : "font-medium"}`}>
-                {tab.label}
-              </span>
             </button>
           );
         })}

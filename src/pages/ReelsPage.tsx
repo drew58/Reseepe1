@@ -43,6 +43,7 @@ const ReelsPage = () => {
   const [likedSet, setLikedSet] = useState<Set<string>>(new Set());
   const [savedSet, setSavedSet] = useState<Set<string>>(new Set());
   const [commentFor, setCommentFor] = useState<string | null>(null);
+  const locallyHandledCommentIds = useRef(new Set<string>());
   const [shareFor, setShareFor] = useState<Reel | null>(null);
   const [paused, setPaused] = useState<Record<string, boolean>>({});
   const [muted, setMuted] = useState(true);
@@ -216,7 +217,8 @@ const ReelsPage = () => {
     }
   };
 
-  const bumpCommentCount = (recipeId: string, delta: number) => {
+  const bumpCommentCount = (recipeId: string, delta: number, commentId?: string) => {
+    if (commentId) locallyHandledCommentIds.current.add(commentId);
     setReels((prev) => prev.map((x) => (x.id === recipeId ? { ...x, comment_count: Math.max(0, x.comment_count + delta) } : x)));
   };
 
@@ -225,10 +227,14 @@ const ReelsPage = () => {
       .channel("reels-count-sync")
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "comments" }, (payload) => {
         const recipeId = (payload.new as any)?.recipe_id;
+        const commentId = (payload.new as any)?.id;
+        if (commentId && locallyHandledCommentIds.current.delete(commentId)) return;
         if (recipeId) bumpCommentCount(recipeId, 1);
       })
       .on("postgres_changes", { event: "DELETE", schema: "public", table: "comments" }, (payload) => {
         const recipeId = (payload.old as any)?.recipe_id;
+        const commentId = (payload.old as any)?.id;
+        if (commentId && locallyHandledCommentIds.current.delete(commentId)) return;
         if (recipeId) bumpCommentCount(recipeId, -1);
       })
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "likes" }, (payload) => {

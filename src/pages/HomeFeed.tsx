@@ -109,6 +109,7 @@ const HomeFeed = () => {
   const [fullscreenVideo, setFullscreenVideo] = useState<string | null>(null);
   const [fullscreenTitle, setFullscreenTitle] = useState("");
   const [commentRecipeId, setCommentRecipeId] = useState<string | null>(null);
+  const locallyHandledCommentIds = useRef(new Set<string>());
   const [creators, setCreators] = useState<CreatorPreview[]>([]);
   const [creatorTab, setCreatorTab] = useState<"for-you" | "trending">("for-you");
   const [firstComment, setFirstComment] = useState<Record<string, any>>({});
@@ -282,11 +283,15 @@ const HomeFeed = () => {
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "comments" }, (payload) => {
         const recipeId = (payload.new as any)?.recipe_id;
         if (!recipeId) return;
+        const commentId = (payload.new as any)?.id;
+        if (commentId && locallyHandledCommentIds.current.delete(commentId)) return;
         setRecipes((previous) => previous.map((recipe) => recipe.id === recipeId ? { ...recipe, comment_count: Math.max(0, (recipe.comment_count || 0) + 1) } : recipe));
       })
       .on("postgres_changes", { event: "DELETE", schema: "public", table: "comments" }, (payload) => {
         const recipeId = (payload.old as any)?.recipe_id;
         if (!recipeId) return;
+        const commentId = (payload.old as any)?.id;
+        if (commentId && locallyHandledCommentIds.current.delete(commentId)) return;
         setRecipes((previous) => previous.map((recipe) => recipe.id === recipeId ? { ...recipe, comment_count: Math.max(0, (recipe.comment_count || 0) - 1) } : recipe));
       })
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "likes" }, (payload) => {
@@ -556,7 +561,10 @@ const HomeFeed = () => {
       <CommentsSheet
         recipeId={commentRecipeId}
         onClose={() => setCommentRecipeId(null)}
-        onCountChange={(recipeId, delta) => setRecipes((previous) => previous.map((recipe) => recipe.id === recipeId ? { ...recipe, comment_count: Math.max(0, (recipe.comment_count || 0) + delta) } : recipe))}
+        onCountChange={(recipeId, delta, commentId) => {
+          if (commentId) locallyHandledCommentIds.current.add(commentId);
+          setRecipes((previous) => previous.map((recipe) => recipe.id === recipeId ? { ...recipe, comment_count: Math.max(0, (recipe.comment_count || 0) + delta) } : recipe));
+        }}
         bottomOffset={64}
       />
 

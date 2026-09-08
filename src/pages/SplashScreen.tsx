@@ -1,5 +1,14 @@
 import { motion } from "framer-motion";
-import BrandLogo from "@/components/BrandLogo";
+
+const letters = [
+  { char: "R", color: "text-brand-green" },
+  { char: "E", color: "text-brand-green" },
+  { char: "S", color: "text-brand-orange" },
+  { char: "E", color: "text-brand-orange" },
+  { char: "E", color: "text-brand-orange" },
+  { char: "P", color: "text-brand-green" },
+  { char: "E", color: "text-brand-green" },
+];
 
 const SplashScreen = ({ onComplete }: { onComplete: () => void }) => {
   return (
@@ -10,15 +19,26 @@ const SplashScreen = ({ onComplete }: { onComplete: () => void }) => {
       transition={{ duration: 0.5 }}
       onAnimationComplete={() => {}}
     >
-      <motion.div
-        className="absolute text-5xl font-bold font-display"
-        initial={{ opacity: 0, y: 30, scale: 0.5 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        transition={{ delay: 0.3, duration: 0.6, type: "spring", stiffness: 200, damping: 15 }}
-        onAnimationComplete={() => setTimeout(onComplete, 800)}
-      >
-        <BrandLogo />
-      </motion.div>
+      <div className="absolute flex items-center text-5xl font-bold font-display">
+        {letters.map((letter, index) => (
+          <motion.span
+            key={`${letter.char}-${index}`}
+            className={letter.color}
+            initial={{ opacity: 0, y: 30, scale: 0.5 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{
+              delay: 0.3 + index * 0.12,
+              duration: 0.4,
+              type: "spring",
+              stiffness: 200,
+              damping: 15,
+            }}
+            onAnimationComplete={index === letters.length - 1 ? () => setTimeout(onComplete, 800) : undefined}
+          >
+            {letter.char}
+          </motion.span>
+        ))}
+      </div>
 
       {/* Subtle tagline */}
       <motion.p

@@ -156,17 +156,19 @@ const Auth = () => {
             )}
 
             {/* Display Name */}
-            <div>
-              <label className="text-xs font-semibold text-foreground block mb-1.5">Full Name</label>
-              <input
-                type="text"
-                value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
-                placeholder="Your full name"
-                className="w-full px-4 py-2.5 rounded-xl bg-secondary border border-border text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
-                disabled={isLoading}
-              />
-            </div>
+            {!isLogin && (
+              <div>
+                <label className="text-xs font-semibold text-foreground block mb-1.5">Full Name</label>
+                <input
+                  type="text"
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                  placeholder="Your full name"
+                  className="w-full px-4 py-2.5 rounded-xl bg-secondary border border-border text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  disabled={isLoading}
+                />
+              </div>
+            )}
 
             {/* Username (Creator only) */}
             {!isLogin && accountType === "creator" && (

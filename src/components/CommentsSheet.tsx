@@ -19,7 +19,7 @@ type CommentRow = {
 interface Props {
   recipeId: string | null;
   onClose: () => void;
-  onCountChange?: (recipeId: string, delta: number) => void;
+  onCountChange?: (recipeId: string, delta: number, commentId?: string) => void;
   bottomOffset?: number;
 }
 
@@ -82,7 +82,6 @@ const CommentsSheet = ({ recipeId, onClose, onCountChange, bottomOffset = 0 }: P
           row.profile = prof as any;
           setComments((prev) => {
             if (prev.find((c) => c.id === row.id)) return prev;
-            onCountChange?.(row.recipe_id, 1);
             return [...prev, row];
           });
           setTimeout(() => listRef.current?.scrollTo({ top: 99999, behavior: "smooth" }), 50);
@@ -92,8 +91,6 @@ const CommentsSheet = ({ recipeId, onClose, onCountChange, bottomOffset = 0 }: P
         "postgres_changes",
         { event: "DELETE", schema: "public", table: "comments", filter: `recipe_id=eq.${recipeId}` },
         (payload) => setComments((prev) => {
-          const existed = prev.some((c) => c.id === (payload.old as any).id);
-          if (existed) onCountChange?.(recipeId, -1);
           return prev.filter((c) => c.id !== (payload.old as any).id);
         })
       )
@@ -120,7 +117,7 @@ const CommentsSheet = ({ recipeId, onClose, onCountChange, bottomOffset = 0 }: P
       const { data: prof } = await supabase.from("profiles").select("user_id,display_name,username,avatar_url").eq("user_id", currentUser.id).maybeSingle();
       row.profile = prof as any;
       setComments((prev) => (prev.find((c) => c.id === row.id) ? prev : [...prev, row]));
-      onCountChange?.(recipeId, 1);
+      onCountChange?.(recipeId, 1, row.id);
       setText("");
       setTimeout(() => listRef.current?.scrollTo({ top: 99999, behavior: "smooth" }), 50);
     }
@@ -130,7 +127,7 @@ const CommentsSheet = ({ recipeId, onClose, onCountChange, bottomOffset = 0 }: P
   const remove = async (id: string) => {
     const row = comments.find((c) => c.id === id);
     setComments((prev) => prev.filter((c) => c.id !== id));
-    if (row?.recipe_id) onCountChange?.(row.recipe_id, -1);
+    if (row?.recipe_id) onCountChange?.(row.recipe_id, -1, row.id);
     const { error } = await supabase.from("comments").delete().eq("id", id);
     if (error) {
       toast.error(error.message);

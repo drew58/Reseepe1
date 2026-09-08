@@ -76,7 +76,7 @@ const SearchPage = () => {
   const runDbSearch = async () => {
     setLoading(true);
     try {
-      let q = supabase.from("recipes").select("*").limit(40);
+      let q = supabase.from("recipes").select("*").limit(mode === "ingredients" ? 200 : 40);
       if (mode === "meal" && query.trim()) {
         q = q.or(`title.ilike.%${query}%,description.ilike.%${query}%`);
       }
@@ -84,11 +84,18 @@ const SearchPage = () => {
         q = q.contains("tags", [activeCategory.toLowerCase()]);
       }
       if (mode === "ingredients" && selectedIngredients.length) {
-        q = q.overlaps("ingredients", selectedIngredients);
+        // Ingredient entries often include quantities or different casing, so exact array overlap misses valid recipes.
       }
       const { data, error } = await q;
       if (error) throw error;
-      const hydrated = await hydrateCreators(data ?? []);
+      const ingredientTerms = selectedIngredients.map((ingredient) => ingredient.trim().toLowerCase());
+      const matchingRows = mode === "ingredients" && ingredientTerms.length
+        ? (data ?? []).filter((recipe) => {
+            const ingredients = ((recipe.ingredients as string[] | null) ?? []).map((ingredient) => ingredient.toLowerCase());
+            return ingredientTerms.some((term) => ingredients.some((ingredient) => ingredient.includes(term)));
+          })
+        : data ?? [];
+      const hydrated = await hydrateCreators(matchingRows);
 
       if (mode === "ingredients" && selectedIngredients.length) {
         hydrated.forEach((r) => {
