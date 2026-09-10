@@ -130,25 +130,28 @@ const CreatorProfile = () => {
     if (!user) return navigate("/auth");
     if (!profile) return;
     setBusy("subscribe");
-    const { error } = await (supabase as any)
-      .from("billing_subscriptions")
-      .upsert(
-        {
-          user_id: user.id,
-          provider: "manual",
-          tier,
-          status: "active",
-          current_period_ends_at: null,
-        },
-        { onConflict: "user_id" },
-      );
-    if (error) toast.error(error.message);
-    else {
+    try {
+      const { error } = await (supabase as any)
+        .from("billing_subscriptions")
+        .upsert(
+          {
+            user_id: user.id,
+            provider: "manual",
+            tier,
+            status: "active",
+            current_period_ends_at: null,
+          },
+          { onConflict: "user_id" },
+        );
+      if (error) throw error;
       setSubscription({ tier });
       toast.success(tier === "premium" ? "Premium subscription active" : "Subscribed for free content");
+      setShowPlans(false);
+    } catch (error: any) {
+      toast.error(error.message || "Unable to update subscription");
+    } finally {
+      setBusy(null);
     }
-    setBusy(null);
-    setShowPlans(false);
   };
 
   const unsubscribe = async () => {
