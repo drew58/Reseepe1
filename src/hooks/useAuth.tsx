@@ -106,7 +106,8 @@ export const useAuth = () => {
     role: "user" | "creator",
     username?: string,
   ) => {
-    const redirectUrl = `${window.location.origin}/home`;
+    const appUrl = (import.meta.env.VITE_APP_URL || window.location.origin).replace(/\/$/, "");
+    const redirectUrl = `${appUrl}/auth/callback`;
     const { data, error } = await supabase.auth.signUp({
       email,
       password,

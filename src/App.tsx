@@ -7,6 +7,7 @@ import BottomNav from "@/components/BottomNav";
 import Index from "./pages/Index";
 import Onboarding from "@/pages/Onboarding";
 import Auth from "./pages/Auth";
+import AuthCallback from "./pages/AuthCallback";
 import HomeFeed from "./pages/HomeFeed";
 import SearchPage from "./pages/SearchPage";
 import RecipeDetail from "./pages/RecipeDetail";
@@ -38,6 +39,7 @@ const App = () => (
             <Route path="/index" element={<Index />} />
            <Route path="/onboarding" element={<Onboarding />} />
             <Route path="/auth" element={<Auth />} />
+            <Route path="/auth/callback" element={<AuthCallback />} />
             <Route path="/home" element={<HomeFeed />} />
             <Route path="/search" element={<SearchPage />} />
             <Route path="/recipe/:id" element={<RecipeDetail />} />

@@ -18,6 +18,7 @@ const Auth = () => {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const { signUp, signIn } = useAuth();
+  const appUrl = (import.meta.env.VITE_APP_URL || window.location.origin).replace(/\/$/, "");
 
   const handleSubmit = async () => {
     if (!email || !password) {
@@ -91,7 +92,7 @@ const Auth = () => {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${window.location.origin}/home`,
+        redirectTo: `${appUrl}/auth/callback`,
       },
     });
 
