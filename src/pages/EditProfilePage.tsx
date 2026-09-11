@@ -22,6 +22,7 @@ const EditProfilePage = () => {
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
+  const creatorSetup = searchParams.get("becomeCreator") === "1";
 
   // Prefill existing profile
   useEffect(() => {
@@ -60,8 +61,23 @@ const EditProfilePage = () => {
 
   const handleSave = async () => {
     if (!user) return;
+    if (creatorSetup && (!displayName.trim() || !username.trim() || !bio.trim() || !avatarFile && !avatarUrl)) {
+      toast.error("Add a photo, name, username, and bio to continue");
+      return;
+    }
     setSaving(true);
     try {
+      if (creatorSetup) {
+        const { data: usernameOwner, error: usernameError } = await (supabase as any)
+          .from("profiles")
+          .select("user_id")
+          .ilike("username", username.trim())
+          .neq("user_id", user.id)
+          .maybeSingle();
+        if (usernameError) throw usernameError;
+        if (usernameOwner) throw new Error("That username is already taken");
+      }
+
       let newAvatarUrl: string | undefined;
 
       if (avatarFile) {
@@ -117,10 +133,13 @@ const EditProfilePage = () => {
   return (
     <div className="min-h-screen bg-background pb-24 pt-12 px-4">
       <div className="flex items-center gap-3 mb-6">
-        <button onClick={() => navigate(-1)} className="w-9 h-9 rounded-full bg-secondary flex items-center justify-center">
+        <button onClick={() => navigate(creatorSetup ? "/settings" : -1)} className="w-9 h-9 rounded-full bg-secondary flex items-center justify-center">
           <ArrowLeft className="w-4 h-4 text-foreground" />
         </button>
-        <h1 className="text-xl font-bold font-display text-foreground">Edit Profile</h1>
+        <div>
+          <h1 className="text-xl font-bold font-display text-foreground">{creatorSetup ? "Become a Creator" : "Edit Profile"}</h1>
+          {creatorSetup && <p className="text-xs text-muted-foreground mt-0.5">Complete your profile to unlock creator tools.</p>}
+        </div>
       </div>
 
       {loading ? (
@@ -223,6 +242,15 @@ const EditProfilePage = () => {
             {saving && <Loader2 className="w-4 h-4 animate-spin" />}
             {saving ? "Saving..." : "Save Changes"}
           </button>
+          {creatorSetup && (
+            <button
+              onClick={() => navigate("/settings")}
+              disabled={saving}
+              className="w-full mt-3 py-3 text-sm font-semibold text-muted-foreground"
+            >
+              Cancel and stay a food lover
+            </button>
+          )}
         </>
       )}
     </div>

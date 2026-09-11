@@ -1,4 +1,4 @@
-import { ArrowLeft, User, Bell, Globe, Lock, Palette, CircleHelp, LogOut, ChevronRight, Moon, Sun, Shield, FileText, MessageSquare, CreditCard, Loader2 } from "lucide-react";
+import { ArrowLeft, User, Bell, Globe, Lock, Palette, CircleHelp, LogOut, ChevronRight, Moon, Sun, Shield, FileText, MessageSquare, CreditCard, Loader2, ChefHat } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
@@ -72,6 +72,7 @@ const SettingsPage = () => {
       title: "Account",
       items: [
         { icon: User, label: "Edit Profile", action: () => navigate("/profile/edit") },
+        { icon: ChefHat, label: "Become a Creator", action: () => navigate("/profile/edit?becomeCreator=1") },
         { icon: Lock, label: "Password & Security", action: () => {} },
         { icon: CreditCard, label: "Subscription & Billing", action: () => navigate("/subscriptions") },
       ],

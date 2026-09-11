@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Heart, Bookmark, Share2, Clock, DollarSign, ChefHat, MessageCircle, Loader2, ImageOff, Trash2 } from "lucide-react";
 import { motion } from "framer-motion";
@@ -23,6 +23,7 @@ const RecipeDetail = () => {
   const [shareOpen, setShareOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [userCurrency, setUserCurrency] = useState("USD");
+  const pendingActions = useRef(new Set<string>());
 
   useEffect(() => {
     if (!id) return;
@@ -41,22 +42,30 @@ const RecipeDetail = () => {
       })
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "likes" }, (payload) => {
         const recipeId = (payload.new as any)?.recipe_id;
+        const userId = (payload.new as any)?.user_id;
         if (recipeId !== id) return;
+        if (pendingActions.current.delete(`INSERT:like:${userId}:${id}`)) return;
         setRecipe((r: any) => r ? { ...r, like_count: Math.max(0, (r.like_count || 0) + 1) } : r);
       })
       .on("postgres_changes", { event: "DELETE", schema: "public", table: "likes" }, (payload) => {
         const recipeId = (payload.old as any)?.recipe_id;
+        const userId = (payload.old as any)?.user_id;
         if (recipeId !== id) return;
+        if (pendingActions.current.delete(`DELETE:like:${userId}:${id}`)) return;
         setRecipe((r: any) => r ? { ...r, like_count: Math.max(0, (r.like_count || 0) - 1) } : r);
       })
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "saves" }, (payload) => {
         const recipeId = (payload.new as any)?.recipe_id;
+        const userId = (payload.new as any)?.user_id;
         if (recipeId !== id) return;
+        if (pendingActions.current.delete(`INSERT:save:${userId}:${id}`)) return;
         setRecipe((r: any) => r ? { ...r, save_count: Math.max(0, (r.save_count || 0) + 1) } : r);
       })
       .on("postgres_changes", { event: "DELETE", schema: "public", table: "saves" }, (payload) => {
         const recipeId = (payload.old as any)?.recipe_id;
+        const userId = (payload.old as any)?.user_id;
         if (recipeId !== id) return;
+        if (pendingActions.current.delete(`DELETE:save:${userId}:${id}`)) return;
         setRecipe((r: any) => r ? { ...r, save_count: Math.max(0, (r.save_count || 0) - 1) } : r);
       })
       .subscribe();
@@ -104,15 +113,17 @@ const RecipeDetail = () => {
 
   const toggleLike = async () => {
     if (!id) return;
-    const currentUser = await getCurrentUser();
+    const currentUser = user ?? await getCurrentUser();
     if (!currentUser) return navigate("/auth");
     const next = !liked;
+    pendingActions.current.add(`${next ? "INSERT" : "DELETE"}:like:${currentUser.id}:${id}`);
     setLiked(next);
     setRecipe((r: any) =>
       r ? { ...r, like_count: Math.max(0, (r.like_count || 0) + (next ? 1 : -1)) } : r
     );
     const { error } = await persistLike(currentUser.id, id, next);
     if (error) {
+      pendingActions.current.delete(`${next ? "INSERT" : "DELETE"}:like:${currentUser.id}:${id}`);
       setLiked(!next);
       setRecipe((r: any) =>
         r ? { ...r, like_count: Math.max(0, (r.like_count || 0) + (next ? -1 : 1)) } : r
@@ -123,12 +134,14 @@ const RecipeDetail = () => {
 
   const toggleSave = async () => {
     if (!id) return;
-    const currentUser = await getCurrentUser();
+    const currentUser = user ?? await getCurrentUser();
     if (!currentUser) return navigate("/auth");
     const next = !saved;
+    pendingActions.current.add(`${next ? "INSERT" : "DELETE"}:save:${currentUser.id}:${id}`);
     setSaved(next);
     const { error } = await persistSave(currentUser.id, id, next);
     if (error) {
+      pendingActions.current.delete(`${next ? "INSERT" : "DELETE"}:save:${currentUser.id}:${id}`);
       setSaved(!next);
       toast.error(error.message);
     } else if (next) toast.success("Saved");

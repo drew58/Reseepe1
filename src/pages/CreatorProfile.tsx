@@ -131,9 +131,24 @@ const CreatorProfile = () => {
     if (!profile) return;
     setBusy("subscribe");
     try {
-      const { error } = await (supabase as any).rpc("set_manual_subscription", {
+      let { error } = await (supabase as any).rpc("set_manual_subscription", {
         requested_tier: tier,
       });
+      if (error?.code === "PGRST202") {
+        const fallback = await (supabase as any)
+          .from("billing_subscriptions")
+          .upsert(
+            {
+              user_id: user.id,
+              provider: "manual",
+              tier,
+              status: "active",
+              current_period_ends_at: null,
+            },
+            { onConflict: "user_id" },
+          );
+        error = fallback.error;
+      }
       if (error) throw error;
       setSubscription({ tier });
       toast.success(tier === "premium" ? "Premium subscription active" : "Subscribed for free content");
@@ -148,7 +163,14 @@ const CreatorProfile = () => {
   const unsubscribe = async () => {
     if (!user || !profile) return;
     setBusy("subscribe");
-    const { error } = await (supabase as any).rpc("cancel_manual_subscription");
+    let { error } = await (supabase as any).rpc("cancel_manual_subscription");
+    if (error?.code === "PGRST202") {
+      const fallback = await (supabase as any)
+        .from("billing_subscriptions")
+        .delete()
+        .eq("user_id", user.id);
+      error = fallback.error;
+    }
     if (error) toast.error(error.message);
     else {
       setSubscription(null);

@@ -7,6 +7,7 @@ import BrandLogo from "@/components/BrandLogo";
 import VerifiedBadge from "@/components/VerifiedBadge";
 import VideoFullScreenModal from "@/components/VideoFullScreenModal";
 import CommentsSheet from "@/components/CommentsSheet";
+import ShareSheet from "@/components/ShareSheet";
 import CreatorNav from "@/components/CreatorNav";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -114,7 +115,10 @@ const HomeFeed = () => {
   const [creatorTab, setCreatorTab] = useState<"for-you" | "trending">("for-you");
   const [firstComment, setFirstComment] = useState<Record<string, any>>({});
   const [showCreatorInvite, setShowCreatorInvite] = useState(false);
+  const [shareRecipe, setShareRecipe] = useState<{ id: string; title: string } | null>(null);
   const loadingMoreRef = useRef(false);
+  const pendingActions = useRef(new Set<string>());
+  const busyActions = useRef(new Set<string>());
 
   useEffect(() => {
     if (!user || authLoading) return;
@@ -244,9 +248,13 @@ const HomeFeed = () => {
 
   const toggleLike = async (id: string, isLiked: boolean) => {
     if (authLoading) return;
-    const currentUser = await getCurrentUser();
+    const currentUser = user ?? await getCurrentUser();
     if (!currentUser) return navigate("/auth");
+    const actionKey = `like:${currentUser.id}:${id}`;
+    if (busyActions.current.has(actionKey)) return;
+    busyActions.current.add(actionKey);
     const next = !isLiked;
+    pendingActions.current.add(`${next ? "INSERT" : "DELETE"}:like:${currentUser.id}:${id}`);
     setLikedRecipes((previous) => {
       const updated = new Set(previous);
       next ? updated.add(id) : updated.delete(id);
@@ -260,6 +268,7 @@ const HomeFeed = () => {
       ? await (supabase as any).from("likes").upsert({ user_id: currentUser.id, recipe_id: id }, { onConflict: "user_id,recipe_id" })
       : await (supabase as any).from("likes").delete().eq("user_id", currentUser.id).eq("recipe_id", id);
     if (error) {
+      pendingActions.current.delete(`${next ? "INSERT" : "DELETE"}:like:${currentUser.id}:${id}`);
       setLikedRecipes((previous) => {
         const updated = new Set(previous);
         next ? updated.delete(id) : updated.add(id);
@@ -269,13 +278,18 @@ const HomeFeed = () => {
         ? { ...recipe, like_count: Math.max(0, recipe.like_count + (next ? -1 : 1)) }
         : recipe));
     }
+      busyActions.current.delete(actionKey);
   };
 
   const toggleSave = async (id: string, isSaved: boolean) => {
     if (authLoading) return;
-    const currentUser = await getCurrentUser();
+    const currentUser = user ?? await getCurrentUser();
     if (!currentUser) return navigate("/auth");
+    const actionKey = `save:${currentUser.id}:${id}`;
+    if (busyActions.current.has(actionKey)) return;
+    busyActions.current.add(actionKey);
     const next = !isSaved;
+    pendingActions.current.add(`${next ? "INSERT" : "DELETE"}:save:${currentUser.id}:${id}`);
     setSavedRecipes((previous) => {
       const updated = new Set(previous);
       next ? updated.add(id) : updated.delete(id);
@@ -289,6 +303,7 @@ const HomeFeed = () => {
       ? await (supabase as any).from("saves").upsert({ user_id: currentUser.id, recipe_id: id }, { onConflict: "user_id,recipe_id" })
       : await (supabase as any).from("saves").delete().eq("user_id", currentUser.id).eq("recipe_id", id);
     if (error) {
+      pendingActions.current.delete(`${next ? "INSERT" : "DELETE"}:save:${currentUser.id}:${id}`);
       setSavedRecipes((previous) => {
         const updated = new Set(previous);
         next ? updated.delete(id) : updated.add(id);
@@ -298,6 +313,7 @@ const HomeFeed = () => {
         ? { ...recipe, save_count: Math.max(0, recipe.save_count + (next ? -1 : 1)) }
         : recipe));
     }
+      busyActions.current.delete(actionKey);
   };
 
   useEffect(() => {
@@ -319,12 +335,16 @@ const HomeFeed = () => {
       })
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "likes" }, (payload) => {
         const recipeId = (payload.new as any)?.recipe_id;
+        const userId = (payload.new as any)?.user_id;
         if (!recipeId) return;
+        if (pendingActions.current.delete(`INSERT:like:${userId}:${recipeId}`)) return;
         setRecipes((previous) => previous.map((recipe) => recipe.id === recipeId ? { ...recipe, like_count: Math.max(0, (recipe.like_count || 0) + 1) } : recipe));
       })
       .on("postgres_changes", { event: "DELETE", schema: "public", table: "likes" }, (payload) => {
         const recipeId = (payload.old as any)?.recipe_id;
+        const userId = (payload.old as any)?.user_id;
         if (!recipeId) return;
+        if (pendingActions.current.delete(`DELETE:like:${userId}:${recipeId}`)) return;
         setRecipes((previous) => previous.map((recipe) => recipe.id === recipeId ? { ...recipe, like_count: Math.max(0, (recipe.like_count || 0) - 1) } : recipe));
       })
       .subscribe();
@@ -525,6 +545,7 @@ const HomeFeed = () => {
                 <motion.button
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.95 }}
+                  onClick={() => setShareRecipe({ id: r.id, title: r.title })}
                   className="flex items-center gap-1"
                 >
                   <Share2 className="w-5 h-5 text-foreground" />
@@ -597,6 +618,7 @@ const HomeFeed = () => {
           </div>
         )}
       </div>
+      <ShareSheet recipe={shareRecipe} onClose={() => setShareRecipe(null)} />
 
       {/* Fullscreen video modal */}
       <VideoFullScreenModal

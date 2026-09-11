@@ -20,6 +20,7 @@ const ShareSheet = ({ recipe, onClose }: Props) => {
   const navigate = useNavigate();
   const [targets, setTargets] = useState<ShareTarget[]>([]);
   const [sendingTo, setSendingTo] = useState<string | null>(null);
+  const [sharing, setSharing] = useState(false);
   const open = !!recipe;
 
   useEffect(() => {
@@ -53,6 +54,29 @@ const ShareSheet = ({ recipe, onClose }: Props) => {
     }
   };
 
+  const shareExternally = async () => {
+    if (!recipe || sharing) return;
+    setSharing(true);
+    try {
+      await shareRecipe(recipe.id, recipe.title);
+    } finally {
+      setSharing(false);
+    }
+  };
+
+  const copyLink = async () => {
+    if (!recipe || sharing) return;
+    setSharing(true);
+    try {
+      await navigator.clipboard.writeText(`${window.location.origin}/recipe/${recipe.id}`);
+      toast.success("Link copied");
+    } catch (error: any) {
+      toast.error(error.message || "Could not copy link");
+    } finally {
+      setSharing(false);
+    }
+  };
+
   return (
     <AnimatePresence>
       {open && recipe && (
@@ -63,11 +87,11 @@ const ShareSheet = ({ recipe, onClose }: Props) => {
               <button onClick={onClose} className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center"><X className="w-4 h-4" /></button>
             </div>
             <div className="p-4 space-y-3 pb-safe">
-              <button onClick={() => shareRecipe(recipe.id, recipe.title)} className="w-full flex items-center gap-3 p-3 rounded-2xl bg-secondary text-left">
+              <button onClick={shareExternally} disabled={sharing} className="w-full flex items-center gap-3 p-3 rounded-2xl bg-secondary text-left disabled:opacity-50">
                 <Share2 className="w-5 h-5 text-primary" />
-                <span className="text-sm font-semibold text-foreground">Share outside <BrandLogo /></span>
+                <span className="text-sm font-semibold text-foreground">{sharing ? "Preparing link..." : <>Share outside <BrandLogo /></>}</span>
               </button>
-              <button onClick={async () => { await navigator.clipboard.writeText(`${window.location.origin}/recipe/${recipe.id}`); toast.success("Link copied"); }} className="w-full flex items-center gap-3 p-3 rounded-2xl bg-secondary text-left">
+              <button onClick={copyLink} disabled={sharing} className="w-full flex items-center gap-3 p-3 rounded-2xl bg-secondary text-left disabled:opacity-50">
                 <Copy className="w-5 h-5 text-primary" />
                 <span className="text-sm font-semibold text-foreground">Copy link</span>
               </button>
