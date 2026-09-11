@@ -71,22 +71,9 @@ const Auth = () => {
 
   const handleGoogleSignIn = async () => {
     if (!isLogin) {
-      if (!accountType) {
-        toast.error("Please choose whether you are a food lover or a creator first.");
-        return;
-      }
-
-      if (accountType === "creator" && !username.trim()) {
-        toast.error("Please enter a username before continuing with Google.");
-        return;
-      }
-
-      localStorage.setItem("reseepe_pending_google_role", accountType);
-      if (accountType === "creator") {
-        localStorage.setItem("reseepe_pending_google_username", username.trim().toLowerCase());
-      } else {
-        localStorage.removeItem("reseepe_pending_google_username");
-      }
+      localStorage.setItem("reseepe_pending_google_role", "user");
+      localStorage.removeItem("reseepe_pending_google_username");
+      localStorage.setItem("reseepe_google_signup_pending", "1");
     }
 
     const { error } = await supabase.auth.signInWithOAuth({

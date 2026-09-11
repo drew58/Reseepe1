@@ -1,5 +1,5 @@
 import { ArrowLeft, Camera, Loader2 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useState, useRef, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { CUISINES, REGIONS } from "@/lib/taxonomy";
@@ -8,6 +8,7 @@ import { toast } from "sonner";
 
 const EditProfilePage = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user, isCreator } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -91,6 +92,16 @@ const EditProfilePage = () => {
   );
 
       if (error) throw error;
+
+      if (searchParams.get("becomeCreator") === "1") {
+        const { error: promotionError } = await (supabase as any).rpc("promote_to_creator");
+        if (promotionError) throw promotionError;
+        localStorage.removeItem("reseepe_google_creator_invite");
+        toast.success("Your creator profile is ready!");
+        window.location.assign("/creator-dashboard");
+        return;
+      }
+
       toast.success("Profile updated!");
       navigate(-1);
     } catch (err: any) {

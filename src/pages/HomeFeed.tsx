@@ -1,4 +1,4 @@
-import { Search, MessageSquare, Heart, Bookmark, Share2, Clock, DollarSign } from "lucide-react";
+import { Search, MessageSquare, Heart, Bookmark, Share2, Clock, DollarSign, ChefHat, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
@@ -113,7 +113,30 @@ const HomeFeed = () => {
   const [creators, setCreators] = useState<CreatorPreview[]>([]);
   const [creatorTab, setCreatorTab] = useState<"for-you" | "trending">("for-you");
   const [firstComment, setFirstComment] = useState<Record<string, any>>({});
+  const [showCreatorInvite, setShowCreatorInvite] = useState(false);
   const loadingMoreRef = useRef(false);
+
+  useEffect(() => {
+    if (!user || authLoading) return;
+    const isGoogleUser = user.app_metadata?.provider === "google" || user.app_metadata?.providers?.includes("google");
+    const isPendingSignup = localStorage.getItem("reseepe_google_signup_pending") === "1";
+    const inviteKey = `reseepe_google_creator_invite:${user.id}`;
+    if (isGoogleUser && isPendingSignup && !localStorage.getItem(inviteKey)) {
+      setShowCreatorInvite(true);
+    }
+  }, [user, authLoading]);
+
+  const closeCreatorInvite = () => {
+    if (user) localStorage.setItem(`reseepe_google_creator_invite:${user.id}`, "1");
+    localStorage.removeItem("reseepe_google_signup_pending");
+    setShowCreatorInvite(false);
+  };
+
+  const startCreatorSetup = () => {
+    if (user) localStorage.setItem(`reseepe_google_creator_invite:${user.id}`, "1");
+    localStorage.removeItem("reseepe_google_signup_pending");
+    navigate("/profile/edit?becomeCreator=1");
+  };
 
   const enrichRecipes = useCallback(async (rows: any[]) => {
     const cIds = Array.from(new Set(rows.map((r) => r.creator_id)));
@@ -178,7 +201,7 @@ const HomeFeed = () => {
   }, [fetchPage]);
 
   useEffect(() => {
-    supabase.rpc("discover_creators", { search: null, limit_count: 6 }).then(({ data, error }) => {
+    (supabase as any).rpc("discover_creators", { search: null, limit_count: 6 }).then(({ data, error }: any) => {
       if (error) console.error("Creator discovery failed:", error);
       else setCreators((data || []) as CreatorPreview[]);
     });
@@ -234,8 +257,8 @@ const HomeFeed = () => {
       : recipe));
 
     const { error } = next
-      ? await supabase.from("likes").upsert({ user_id: currentUser.id, recipe_id: id }, { onConflict: "user_id,recipe_id" })
-      : await supabase.from("likes").delete().eq("user_id", currentUser.id).eq("recipe_id", id);
+      ? await (supabase as any).from("likes").upsert({ user_id: currentUser.id, recipe_id: id }, { onConflict: "user_id,recipe_id" })
+      : await (supabase as any).from("likes").delete().eq("user_id", currentUser.id).eq("recipe_id", id);
     if (error) {
       setLikedRecipes((previous) => {
         const updated = new Set(previous);
@@ -263,8 +286,8 @@ const HomeFeed = () => {
       : recipe));
 
     const { error } = next
-      ? await supabase.from("saves").upsert({ user_id: currentUser.id, recipe_id: id }, { onConflict: "user_id,recipe_id" })
-      : await supabase.from("saves").delete().eq("user_id", currentUser.id).eq("recipe_id", id);
+      ? await (supabase as any).from("saves").upsert({ user_id: currentUser.id, recipe_id: id }, { onConflict: "user_id,recipe_id" })
+      : await (supabase as any).from("saves").delete().eq("user_id", currentUser.id).eq("recipe_id", id);
     if (error) {
       setSavedRecipes((previous) => {
         const updated = new Set(previous);
@@ -313,6 +336,31 @@ const HomeFeed = () => {
 
   return (
     <div className="min-h-screen bg-background pb-20">
+      {showCreatorInvite && (
+        <div className="fixed inset-0 z-50 bg-foreground/50 flex items-end justify-center p-4">
+          <div className="w-full max-w-lg rounded-3xl bg-card border border-border p-5 shadow-2xl">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="w-11 h-11 rounded-2xl bg-primary/15 flex items-center justify-center">
+                  <ChefHat className="w-5 h-5 text-primary" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-foreground">Become a creator</h2>
+                  <p className="text-xs text-muted-foreground">Share recipes and build your audience.</p>
+                </div>
+              </div>
+              <button onClick={closeCreatorInvite} className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center" aria-label="Close">
+                <X className="w-4 h-4 text-foreground" />
+              </button>
+            </div>
+            <p className="mt-4 text-sm text-foreground/80">Complete your normal profile first, then unlock creator tools and publishing.</p>
+            <div className="flex gap-2 mt-5">
+              <button onClick={closeCreatorInvite} className="flex-1 py-3 rounded-xl bg-secondary text-foreground text-sm font-semibold">Maybe later</button>
+              <button onClick={startCreatorSetup} className="flex-1 py-3 rounded-xl bg-primary text-primary-foreground text-sm font-semibold">Become a creator</button>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Header */}
       <div className="sticky top-0 z-40 bg-background/95 backdrop-blur-lg px-4 py-4">
         <div className="flex items-center justify-between max-w-2xl mx-auto">
