@@ -45,6 +45,9 @@ export const useAuth = () => {
     const loadRoles = async () => {
       setRolesLoading(true);
 
+      const { error: profileRepairError } = await (supabase as any).rpc("ensure_google_user_profile");
+      if (profileRepairError) console.error("Profile repair failed:", profileRepairError);
+
       const pendingRole = localStorage.getItem("reseepe_pending_google_role") as AppRole | null;
       const pendingUsername = localStorage.getItem("reseepe_pending_google_username");
 
